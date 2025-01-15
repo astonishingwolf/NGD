@@ -1,0 +1,14 @@
+Remeshing 
+    Make sure smaller triangles are not flipped (Have to check what the exact issue was)
+    Check the best place to get the gradients (Whether rendering losses)
+    Need to check what went wrong with the Chamfer Distance task.
+
+Appearence
+    Check the exact reason why hash grid is suddenly working 
+    Chek the novel view synthesis and can it be improved ?
+
+General 
+    Use male and female smpl if possible. Atleast optmization should be that. Its alright
+    Fix the 4DHuman focal length issue
+    Check whether taking constant shape affects the accuracy of the model
+    Choose the best regularizer

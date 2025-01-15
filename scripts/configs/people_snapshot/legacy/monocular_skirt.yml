@@ -1,0 +1,61 @@
+gpu: 0
+seed: 99
+
+timeloop:
+  # Model Params
+  num_epochs : 3000
+  device : cuda:0
+  start_frame : 25
+  end_frame : 275
+  skip_frames : 2
+  warm_ups : 300
+  warm_ups_remesh : 600
+  remesh_freq : 300
+  batch_size : 1
+  model : general
+  skinning_func : rbf  
+  stop_train_after_warmup : True
+  use_grad_clipping : False
+  retriangulate: 0
+  remeshing : True
+  create_new_optimizer : True
+  gradient_clipping : True
+
+  # Save Paths
+  output_path: /hdd_data/nakul/soham/Resulrs_monorecon/Skirt/Baseline
+  Exp_name : Remesh_Dense
+
+  # Input Paths
+  smpl_path : /home/nakul/soham/3d/fixnormalndepth/basicmodel_m_lbs_10_207_0_v1.0.0.pkl
+  smpl_pkl : /hdd_data/nakul/soham/Dataset/People_Snapshot/anran_dance/4dhumans/output_data.pkl
+  mesh: /hdd_data/nakul/soham/Template_dir/skirt/straight_skirt.obj
+  target_diffuse_maps : /hdd_data/nakul/soham/Dataset/People_Snapshot/anran_dance/images_diffuse
+  target_shil_maps : /hdd_data/nakul/soham/Dataset/People_Snapshot/anran_dance/skirt_mask
+  target_complete_shil_maps : /hdd_data/nakul/soham/Dataset/People_Snapshot/anran_dance/seg_human_mask
+  target_normal : /hdd_data/nakul/soham/Dataset/People_Snapshot/male-4-sport/norm_seg
+  image_size : 1080   
+
+  # Training Parameters
+  position_lr_init : 0.00016
+  position_lr_final : 0.0000016
+  position_lr_delay_mult : 0.01
+  position_lr_max_steps : 20_000
+  deform_lr_max_steps : 30_000
+  custom_training_cannonical : True
+
+  # Losses
+  losses:
+    RenderingLoss: 5.0
+    Regularization: 0.0
+    StVKLoss: 1.0
+    BendingLoss: 1.0  
+
+  #Logging
+  logging : False
+  log_interval: 5
+  log_interval_im: 150
+  log_elev: 0
+  log_fov: 60.0
+  log_dist: 3.0
+  log_res: 512
+  log_light_power: 3.0

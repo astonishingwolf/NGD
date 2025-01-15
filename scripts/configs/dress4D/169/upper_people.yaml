@@ -1,0 +1,109 @@
+gpu: 0
+seed: 99
+
+timeloop:
+  # Model Params
+  model_type : Dress4D
+  num_epochs : 1200
+  device : cuda:0
+  start_frame : 0
+  end_frame : 100
+  skip_frames : 1
+  warm_ups : 100
+  warm_ups_remesh : 400
+  remesh_freq : 200
+  batch_size : 1
+  model : hashgrid
+  hidden_layers : 3
+  pose_noise : False
+  noise_level : 0.002
+  vertex_noise : False
+  skinning_func : rbf  
+  stop_train_after_warmup : True
+  use_grad_clipping : False
+  retriangulate: 0
+  remeshing : True
+  create_new_optimizer : False
+  gradient_clipping : True
+  interpolate_new_optimizer : True
+
+
+  #Remeshing
+  remesh_percentile : 0.9
+  max_verts : 15_000
+  start_edge_len : 0.01
+  end_edge_len : 0.007
+  start_percentile : 0.85
+  end_percentile : 0.95
+  remesh_stop : 750
+
+
+  # Save Paths
+  output_path: /hdd_data/nakul/soham/Results/Dress4D/169/Remeshed/upper
+  Exp_name : with_skin_canno2
+
+
+  save_instance : True
+  save_index : 10
+
+  remesh_percentile : 0.8
+
+  
+  # Input Paths
+  smpl_path : /home/nakul/soham/3d/fixnormalndepth/SMPL_NEUTRAL.pkl
+  smpl_pkl : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/smpl/combined_smpl_camera.pkl
+  mesh: /hdd_data/nakul/soham/Template_dir/Dress4D/169/upper/mesh.obj
+  target_diffuse_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/diffuse_upper
+  target_shil_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/shils_upper
+  target_shil_seg_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/shils_upper
+  target_complete_shil_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/seg_human_mask
+  target_hand_mask : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/hands_mask
+  target_depth : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/sapien_depth
+  target_normal : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/sapien_norm
+  target_images : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/textured
+  image_size : 1080   
+
+  # Training Parameters
+  position_lr_init : 0.0003 
+  position_lr_final : 0.00000016
+  position_lr_delay_mult : 0.01
+  position_lr_max_steps : 100_000
+  deform_lr_max_steps : 140_000
+  custom_training_cannonical : True
+
+  # Losses
+  losses:
+    RenderingLoss: 5.0
+    Regularization: 0.0
+    StVKLoss: 1.0
+    BendingLoss: 1.0 
+    DepthDistillation : 1.0
+  
+
+  #Logging
+  logging : False
+  log_interval: 5
+  log_interval_im: 150
+  log_elev: 0
+  log_fov: 60.0
+  log_dist: 3.0
+  log_res: 512
+  log_light_power: 3.0
+
+  ## Texture
+  texture_recon : False
+  texture_lr_base : 1e-4
+  texture_lr_base_dyn : 1e-4
+  texture_map : [1024,1024]
+  max_mip_level : 3
+  tex_epochs : 3000
+  texture_warm_ups : 10
+  use_dynamic_texture : True
+  texture_lr_init : 0.002
+  texture_lr_final : 0.000016
+  texture_lr_delay_mult : 0.01
+  texture_lr_max_steps : 100000
+  spatial_lr_scale : 5
+  ssim_coeff : 0.001
+ 
+  # texture_lr_max_steps : 30_000

@@ -1,0 +1,98 @@
+gpu: 0
+seed: 99
+
+timeloop:
+  # Model Params
+  model_type : Dress4D
+  num_epochs : 1200
+  device : cuda:0
+  start_frame : 0
+  end_frame : 100
+  skip_frames : 1
+  warm_ups : 300
+  warm_ups_remesh : 400
+  remesh_freq : 200
+  batch_size : 1
+  model : general
+  hidden_layers : 3
+  pose_noise : False
+  noise_level : 0.002
+  vertex_noise : True
+  skinning_func : rbf  
+  stop_train_after_warmup : True
+  use_grad_clipping : False
+  retriangulate: 0
+  remeshing : True
+  create_new_optimizer : False
+  gradient_clipping : True
+  interpolate_new_optimizer : True
+
+
+  #Remeshing
+  remesh_percentile : 0.9
+  max_verts : 15_000
+  start_edge_len : 0.01
+  end_edge_len : 0.007
+  start_percentile : 0.85
+  end_percentile : 0.95
+  remesh_stop : 750
+  
+  # Save Paths
+  output_path: /hdd_data/nakul/soham/CVPR_Results/Demo/lower
+  Exp_name : Remeshed
+  save_instance : True
+  save_index : 75
+
+  # Input Paths
+  smpl_path : /home/nakul/soham/3d/fixnormalndepth/SMPL_NEUTRAL.pkl
+  smpl_pkl : /hdd_data/nakul/soham/Dataset/Dress4D/Demo/smpl/combined_smpl_camera.pkl
+  mesh: /hdd_data/nakul/soham/Template_dir/pants/pants.obj
+  target_diffuse_maps : /hdd_data/nakul/soham/Dataset/Dress4D/Demo/lower_cloth/diffuse_seg
+  target_shil_maps :  /hdd_data/nakul/soham/Dataset/Dress4D/Demo/lower_cloth/shil
+  target_shil_seg_maps : /hdd_data/nakul/soham/Dataset/Dress4D/Demo/lower_cloth/shil_seg
+  target_complete_shil_maps : /hdd_data/nakul/soham/Dataset/Dress4D/Demo/human/shil
+  target_hand_mask : /hdd_data/nakul/soham/Dataset/People_Snapshot/female-3-casual/hands_mask
+  # target_normal : /hdd_data/nakul/soham/Dataset/People_Snapshot/male-4-sport/norm_seg
+  target_images : /hdd_data/nakul/soham/Dataset/Dress4D/Demo/lower_cloth/textured_seg
+  image_size : 1080   
+
+  # Training Parameters
+  position_lr_init : 0.0003 
+  position_lr_final : 0.00000016
+  position_lr_delay_mult : 0.01
+  position_lr_max_steps : 100_000
+  deform_lr_max_steps : 140_000
+  custom_training_cannonical : True
+
+  # Losses
+  losses:
+    RenderingLoss: 5.0
+    Regularization: 0.0
+    StVKLoss: 1.0
+    BendingLoss: 1.0  
+
+  #Logging
+  logging : False
+  log_interval: 5
+  log_interval_im: 150
+  log_elev: 0
+  log_fov: 60.0
+  log_dist: 3.0
+  log_res: 512
+  log_light_power: 3.0
+
+  ## Texture
+  texture_recon : True
+  texture_lr_base : 0.002
+  texture_lr_base_dyn : 0.002
+  texture_map : [1024,1024]
+  max_mip_level : 3
+  tex_epochs : 1000
+  texture_warm_ups : 300
+  use_dynamic_texture : True
+  texture_lr_init : 0.0016 
+  texture_lr_final : 0.000016
+  texture_lr_delay_mult : 0.01
+  texture_lr_max_steps : 100000
+  spatial_lr_scale : 5
+  ssim_coeff : 0.001

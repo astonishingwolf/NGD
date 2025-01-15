@@ -1,0 +1,6 @@
+packages/
+assests/
+runs/
+scripts/models/core/tiny-cuda-nn
+__pycache__
+*.pyc
