@@ -17,6 +17,7 @@ from torchvision.utils import save_image
 from torch.utils.tensorboard import SummaryWriter
 import tinycudann as tcnn
 import commentjson as json
+import pickle 
 
 from scripts.utils import *
 from scripts.models.model import Model
@@ -55,7 +56,12 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
 
     output_path = os.path.join(cfg.output_path, cfg.Exp_name)
     remesh_dir = os.path.join(output_path, 'remeshed_template')
+    # body = smpl.SMPL(cfg.smpl_path).to(device)
+    with open(cfg.template_smpl_pkl, 'rb') as f:
+        body_data = pickle.load(f, encoding='latin1')
+    templpate_smpl_shape = torch.tensor(body_data['shape']).to(device)
     body = smpl.SMPL(cfg.smpl_path).to(device)
+    body.update_shape(shape = templpate_smpl_shape)
     jacobian_source = SourceMesh.SourceMesh(0, os.path.join(remesh_dir, f'source_mesh.obj'), {}, 1, ttype=torch.float)
     # jacobian_source = SourceMesh.SourceMesh(0, cfg.mesh, {}, 1, ttype=torch.float)
 
@@ -135,7 +141,7 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
         for _,sample in enumerate(dataloader):
             time = torch.zeros_like(sample['time']).to(device)
             idx = sample['idx']
-
+            pose = sample['reduced_pose']
             if cfg.model_type == 'Dress4D':
                 n_verts_cannonical_before = garment_skinning_function(n_verts_cannonical.unsqueeze(0).detach(), sample['pose'], sample['betas'], body, garment_skinning, sample['translation'])
             else:
@@ -153,14 +159,16 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
             cannonical_face_centers = calculate_face_centers(vertices_post_skinning_cannonical.detach(), source_faces)  
             # face_normals = calculate_face_normals(n_verts_cannonical, source_faces)
             # face_centers = calculate_face_centers(n_verts_cannonical, source_faces)
-            time_extended = time[None, ...].repeat(face_centers.shape[0], 1)
+            time_extended = time[None, ...].repeat(face_centers.shape[0], 1)    
+            pose_extended = pose.repeat(face_centers.shape[0], 1)
             input = SimpleNamespace(
                         n_verts = n_verts_cannonical,
                         n_faces = source_faces,
                         face_centers = cannonical_face_centers,
                         face_normals = cannonical_face_normals,
                         time = time,
-                        time_extended = time_extended
+                        time_extended = time_extended,
+                        pose_extended = pose_extended
                     )
             residual_jacobians = cloth_deform.forward(input)
             residual_jacobians = residual_jacobians.view(residual_jacobians.shape[0],3,3)

@@ -6,10 +6,26 @@ from easydict import EasyDict
 import pyrender
 import pickle
 import glob
-
-
 from scripts.dataloader.utils import *
 DEVICE = 'cuda'
+
+def calculate_pca(pose_data, dim=4):
+
+    if dim > pose_data.shape[1]:
+        raise ValueError(f"Reduction dimension ({dim}) cannot be larger than input dimension ({pose_data.shape[1]})")
+    
+    mean_pose = torch.mean(pose_data, dim=0)
+    centered_data = pose_data - mean_pose
+    cov_matrix = torch.mm(centered_data.T, centered_data) / (pose_data.shape[0] - 1)
+    eigenvalues, eigenvectors = torch.linalg.eigh(cov_matrix)
+    sorted_indices = torch.argsort(eigenvalues, descending=True)
+    eigenvalues = eigenvalues[sorted_indices]
+    eigenvectors = eigenvectors[:, sorted_indices]
+    
+    top_eigenvectors = eigenvectors[:, :dim]
+    reduced_pose = torch.mm(centered_data, top_eigenvectors)
+    
+    return reduced_pose
 
 class MonocularDataset4DDress(Dataset):
     def __init__(self, cfg):
@@ -21,8 +37,17 @@ class MonocularDataset4DDress(Dataset):
             Configuration object.
         """
         
+
         start_end = [cfg.start_frame, cfg.end_frame]
         self.mv, self.proj, self.pose, self.betas, self.translation = load_camera_and_smpl_dress4d(cfg,cfg.smpl_pkl,start_end)
+        self.reduced_pose = calculate_pca(self.pose)
+        # breakpoint()
+        # with open(cfg.template_smpl_pkl, 'rb') as f:
+        #     body_data = pickle.load(f, encoding='latin1')
+        # self.betas = torch.tensor(body_data['shape']).to(DEVICE)
+        # self.betas = self.betas[None].repeat(len(self.mv),1)
+        # breakpoint()
+
         self.time_iterators = torch.linspace(0, 1, len(self.mv)).to(DEVICE)
         self.orig_image = get_targets_diffuse(cfg.target_images, cfg.image_size, start_end, cfg.skip_frames)
         self.target_diffuse = get_targets_diffuse(cfg.target_diffuse_maps, cfg.image_size, start_end,cfg.skip_frames)
@@ -52,6 +77,7 @@ class MonocularDataset4DDress(Dataset):
         sample['target_depth'] = self.target_depth[idx]
         sample['target_norm_map'] = self.target_norm_map[idx]
         sample['tex_image'] = self.orig_image[idx]
+        sample['reduced_pose'] = self.reduced_pose[idx]
         sample['pose'] = self.pose[idx]
         sample['betas'] = self.betas[idx]
         sample['translation'] = self.translation[idx]

@@ -20,7 +20,6 @@ class SMPL(nn.Module):
             dd = pickle.load(f, encoding='latin1')
 
         self.num_shapes = dd['shapedirs'][..., :10].shape[-1]
-        # breakpoint()
         self.num_vertices = dd["v_template"].shape[-2]
         self.num_faces = dd["f"].shape[-2]
         self.num_joints = dd["J_regressor"].shape[0]
@@ -105,6 +104,13 @@ class SMPL(nn.Module):
 
         return v, joint_transforms
 
+    def update_shape(self, shape=None, pose=None, translation=None):
+        shape_blendshape = torch.matmul(shape, self.shapedirs.to(DEVICE)).reshape(-1, self.num_vertices, 3)
+        vs = self.template_vertices.to(DEVICE) + shape_blendshape
+        self.template_vertices = vs.squeeze(0)
+        # self.shapedirs = shape_blendshape
+        # if pose is None:
+        #     return vs
 
 
 class AxisAngleToMatrix(nn.Module):

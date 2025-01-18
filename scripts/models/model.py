@@ -14,6 +14,30 @@ from scripts.models.model_utils import get_embedder
 with open("scripts/models/config/config_hash.json") as f:
 	hash_cfg = json.load(f)
 
+class HashGrid_w_pose(nn.Module):
+    def __init__(self, config, template, multires=10, device = 'cuda'):  
+        super(HashGrid_w_pose, self).__init__()
+        self.device = device
+        self.template = template
+        self.config = config
+        self.t_multires = 10
+        self.position_encoding = tcnn.Encoding(3, hash_cfg["encoding"])
+        self.normal_encoding = tcnn.Encoding(3, hash_cfg["encoding"])
+        self.pose_encoding = tcnn.Encoding(4, hash_cfg["encoding"])
+        # self.pose_encoding, self.pose_encoding_ch = get_embedder(self.t_multires,4)
+        self.network = tcnn.Network(self.position_encoding.n_output_dims + self.normal_encoding.n_output_dims + self.pose_encoding.n_output_dims, 9, hash_cfg["network"])
+        # self.mlp = torch.nn.Sequential(self.position_encoding, self.normal_encoding, self.network)
+
+    def forward(self, inputs) -> torch.Tensor:
+        # breakpoint()
+        pos_encoded = self.position_encoding(inputs.face_centers)
+        normal_encoded = self.normal_encoding(inputs.face_normals)
+        pose_encoded = self.pose_encoding(inputs.pose_extended)
+        residual_jacobians = self.network(torch.cat((pos_encoded, normal_encoded, pose_encoded), dim=1))
+        
+        return residual_jacobians
+
+
 class HashGrid(nn.Module):
     def __init__(self, config, template, device = 'cuda'):  
         super(HashGrid, self).__init__()
@@ -120,8 +144,10 @@ class Model(nn.Module):
             self.model = GeneralSiren(config, template)
         elif config.model == 'hashgrid':
             self.model = HashGrid(config, template)
+        elif config.model == 'hashgrid_vd':
+            self.model = HashGrid_w_pose(config, template)
 
-    def forward(self, inputs) -> torch.Tensor:
+    def forward(self, inputs)   -> torch.Tensor:
 
         residual_jacobians = self.model(inputs)
         return residual_jacobians

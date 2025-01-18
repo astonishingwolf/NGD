@@ -13,7 +13,7 @@ timeloop:
   warm_ups_remesh : 400
   remesh_freq : 200
   batch_size : 1
-  model : hashgrid
+  model : hashgrid_vd
   hidden_layers : 3
   pose_noise : False
   noise_level : 0.002
@@ -40,7 +40,7 @@ timeloop:
 
   # Save Paths
   output_path: /hdd_data/nakul/soham/Results/Dress4D/169/Remeshed/upper
-  Exp_name : with_skin_canno2
+  Exp_name : hopefully_final
 
 
   save_instance : True
@@ -52,6 +52,7 @@ timeloop:
   # Input Paths
   smpl_path : /home/nakul/soham/3d/fixnormalndepth/SMPL_NEUTRAL.pkl
   smpl_pkl : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/smpl/combined_smpl_camera.pkl
+  template_smpl_pkl : /hdd_data/nakul/soham/Template_dir/Dress4D/169/smpl.pkl
   mesh: /hdd_data/nakul/soham/Template_dir/Dress4D/169/upper/mesh.obj
   target_diffuse_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/diffuse_upper
   target_shil_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/shils_upper

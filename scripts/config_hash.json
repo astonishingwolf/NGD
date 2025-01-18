@@ -19,7 +19,7 @@
 		"per_level_scale": 2
 	},
 	"network": {
-		"otype": "FullyFusedMLP",
+		"otype": "CutlassMLP",
 		"activation": "ReLU",
 		"output_activation": "none",
 		"n_neurons": 64,

@@ -15,6 +15,7 @@ from pytorch3d.ops import sample_points_from_meshes
 from torch.utils.data import DataLoader
 from types import SimpleNamespace
 from torch.utils.tensorboard import SummaryWriter
+import pickle 
 
 from dataclasses import dataclass
 from scripts.utils.cloth import Cloth
@@ -77,7 +78,15 @@ class ClothModel:
         self.jacobians_intialized.load()
         self.jacobians_intialized.to(self.device)
         self.jacobians_remeshed = self.jacobians_intialized
+        with open(cfg.template_smpl_pkl, 'rb') as f:
+            body_data = pickle.load(f, encoding='latin1')
+        self.templpate_smpl_shape = torch.tensor(body_data['shape']).to(self.device)
         self.body = smpl.SMPL(cfg.smpl_path).to(self.device)
+        self.body.update_shape(shape = self.templpate_smpl_shape)
+        self.body.skinning_weights = torch.tensor(body_data['blendweights']).to(self.device)
+        # breakpoint()
+        # self.smpl_vertices, self.smpl_betas = get_smpl_params(cfg.smpl_bcnet_pkl)
+        # self.body = self.body.update_skinning_weight(betas=self.smpl_betas)
         self.spatial_lr_scale = 5
 
         if cfg.skinning_func == 'rbf':

@@ -40,11 +40,11 @@ timeloop:
 
   # Save Paths
   output_path: /hdd_data/nakul/soham/Results/Dress4D/185/Remeshed/upper
-  Exp_name : with_diffuse_remeshed_noise
+  Exp_name : hopefully_final
 
 
   save_instance : True
-  save_index : 22
+  save_index : 10
 
   remesh_percentile : 0.8
 
@@ -52,6 +52,7 @@ timeloop:
   # Input Paths
   smpl_path : /home/nakul/soham/3d/fixnormalndepth/SMPL_NEUTRAL.pkl
   smpl_pkl : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/smpl/combined_smpl_camera.pkl
+  template_smpl_pkl : /hdd_data/nakul/soham/Template_dir/Dress4D/185/smpl.pkl
   mesh: /hdd_data/nakul/soham/Template_dir/Dress4D/185/upper/mesh.obj
   target_diffuse_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/human/diffuse_upper
   target_shil_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/human/shils_upper
@@ -60,7 +61,7 @@ timeloop:
   target_hand_mask : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/human/hands_mask
   target_depth : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/human/sapien_depth
   target_normal : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/human/sapien_norm
-  target_images : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/human/raw_img
+  target_images : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/human/textured
   image_size : 1080   
 
   # Training Parameters

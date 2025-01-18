@@ -104,13 +104,21 @@ def geometry_training_loop(cfg,device):
             
             ast_noise = torch.randn(1, 1, device='cuda').expand(cloth_optim.template_face_centers.shape[0], -1) * cam_data.__len__() * smooth_term((e+1) * cam_data.__len__() + it)            
             time = torch.zeros_like(sample['time']).to(device)
-
+            # time = torchsample['time']
+            pose = sample['reduced_pose']
             if cfg.model_type == 'Dress4D':
                 time_extended = time[None, ...].repeat(cloth_optim.template_face_centers.shape[0], 1)
             elif cfg.pose_noise:
                 time_extended = time[None, ...].repeat(cloth_optim.template_face_centers.shape[0], 1) + ast_noise
             else:
                 time_extended = time[None, ...].repeat(cloth_optim.template_face_centers.shape[0], 1)
+            # breakpoint()
+            if cfg.model_type == 'Dress4D':
+                pose_extended = pose.repeat(cloth_optim.template_face_centers.shape[0], 1)
+            elif cfg.pose_noise:
+                pose_extended = pose.repeat(cloth_optim.template_face_centers.shape[0], 1) + ast_noise
+            else:
+                pose_extended = pose.repeat(cloth_optim.template_face_centers.shape[0], 1)
 
             if e >= cfg.warm_ups:
                 cannonical_verts, cannonical_faces = cloth_optim.get_mesh_attr_from_jacobians(cloth_optim.cannonical_jacobians.detach())
@@ -121,6 +129,7 @@ def geometry_training_loop(cfg,device):
                 else:
                     vertices_post_skinning_cannonical = garment_skinning_function(cannonical_verts.unsqueeze(0), sample['pose'], \
                                                                         sample['betas'], cloth_optim.body, cloth_optim.template_garment_skinning)
+
                 vertices_post_skinning_cannonical = vertices_post_skinning_cannonical.squeeze(0)
                 cannonical_face_normals = calculate_face_normals(vertices_post_skinning_cannonical.detach(), cannonical_faces)
                 cannonical_face_centers = calculate_face_centers(vertices_post_skinning_cannonical.detach(), cannonical_faces)
@@ -131,7 +140,8 @@ def geometry_training_loop(cfg,device):
                     face_centers = cannonical_face_centers,
                     face_normals = cannonical_face_normals,
                     time = time,
-                    time_extended = time_extended
+                    time_extended = time_extended,
+                    pose_extended = pose_extended
                 )
                 residual_jacobians = cloth_deform.forward(input)
                 residual_jacobians = residual_jacobians.view(residual_jacobians.shape[0],3,3)
@@ -149,13 +159,12 @@ def geometry_training_loop(cfg,device):
                                                                     sample['betas'], cloth_optim.body, cloth_optim.template_garment_skinning)
             vertices_post_skinning = vertices_post_skinning.squeeze(0)
 
-            if cfg.model_type != 'Dress4D' and cfg.vertex_noise:
-                # breakpoint()
+            if cfg.vertex_noise:
                 vertex_noise = cfg.noise_level * torch.randn(vertices_post_skinning.shape[0], 3, device='cuda')* cam_data.__len__() * smooth_term((e+1) * cam_data.__len__() + it)      
                 vertices_post_skinning = vertices_post_skinning + vertex_noise
-            # breakpoint()
-            deformed_mesh_p3d = Meshes(verts = [vertices_post_skinning], faces = [cloth_optim.cannonical_faces])   
-            
+                # breakpoint()
+
+            deformed_mesh_p3d = Meshes(verts = [vertices_post_skinning], faces = [cloth_optim.cannonical_faces])               
             renderer = AlphaRenderer(sample['mv'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])  
             _, render_info, rast_out = gt_manager_source.render(vertices_post_skinning, cloth_optim.cannonical_faces, renderer)
             face_mask = render_info['masks']
@@ -167,7 +176,6 @@ def geometry_training_loop(cfg,device):
             train_shil = gt_manager_source.shillouette_images()
             train_norm = gt_manager_source.normal_images()
             train_depth = gt_manager_source.depth_images()
-            # breakpoint()
             cloth_optim.jacobian_optimizer_cannonical.zero_grad()
             train_target_render,train_target_render_shil, target_complete_shil = sample['target_diffuse'].to('cuda'),sample['target_shil'].to('cuda'), sample['target_complete_shil'].to('cuda')
             train_target_depth = sample['target_depth'].to('cuda')
@@ -196,7 +204,7 @@ def geometry_training_loop(cfg,device):
                 train_target_normal = train_target_normal,
                 hands_shil = sample['hands_shil'].to('cuda'),
             )
-            # breakpoint()
+
             loss, loss_dict =  total_loss.forward(pred,target)  
             loss.backward()
 

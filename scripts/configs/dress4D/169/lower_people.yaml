@@ -13,16 +13,16 @@ timeloop:
   warm_ups_remesh : 400
   remesh_freq : 200
   batch_size : 1
-  model : hashgrid
+  model : hashgrid_vd
   hidden_layers : 3
   pose_noise : False
   noise_level : 0.002
-  vertex_noise : False
+  vertex_noise : True
   skinning_func : rbf  
   stop_train_after_warmup : True
   use_grad_clipping : False
   retriangulate: 0
-  remeshing : True
+  remeshing : True 
   create_new_optimizer : False
   gradient_clipping : True
   interpolate_new_optimizer : True
@@ -40,8 +40,7 @@ timeloop:
 
   # Save Paths
   output_path: /hdd_data/nakul/soham/Results/Dress4D/169/Remeshed/lower
-  Exp_name : with_diffuse_remeshed_noise
-
+  Exp_name : hopefully_final
 
   save_instance : True
   save_index : 10
@@ -53,6 +52,7 @@ timeloop:
   smpl_path : /home/nakul/soham/3d/fixnormalndepth/SMPL_NEUTRAL.pkl
   smpl_pkl : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/smpl/combined_smpl_camera.pkl
   mesh: /hdd_data/nakul/soham/Template_dir/Dress4D/169/lower/mesh.obj
+  template_smpl_pkl : /hdd_data/nakul/soham/Template_dir/Dress4D/169/smpl.pkl
   target_diffuse_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/diffuse_lower
   target_shil_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/shils_lower
   target_shil_seg_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/shils_lower
