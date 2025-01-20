@@ -44,6 +44,7 @@ from scripts.utils.helper import *
 from scripts.models.model_utils import get_expon_lr_func
 from scripts.losses.rendering_loss import ssim
 from scripts.models.model_utils import get_linear_interpolation_func
+from scripts.models.model_utils import get_embedder
 
 with open("scripts/config_hash.json") as f:
 	hash_cfg = json.load(f)
@@ -94,13 +95,17 @@ def appearance_training_loop(cfg, device = 'cuda'):
 
     uv_tex_static = torch.full([cfg.texture_map[0], cfg.texture_map[1], 3], 0.2, device='cuda', requires_grad=True)
     max_mip_level = cfg.max_mip_level
+    t_multires = 10
+    pca_tex_dim = 2
+    indices_encoding = tcnn.Encoding(2, hash_cfg["encoding"])
+    # pose_encoding, pose_encoding_ch = get_embedder(t_multires,pca_tex_dim)
+    pose_encoding = tcnn.Encoding(4, hash_cfg["encoding"])
+    texture_network = tcnn.Network(indices_encoding.n_output_dims + pose_encoding.n_output_dims, 3, hash_cfg["network"])
     
-    encoding = tcnn.Encoding(2, hash_cfg["encoding"])
-    network = tcnn.Network(encoding.n_output_dims, 3, hash_cfg["network"])
-    texture_mlp_dynamic = torch.nn.Sequential(encoding, network)
+    # texture_mlp_dynamic = torch.nn.Sequential(encoding, network)
 
     texture_mlp_dynamic = tcnn.NetworkWithInputEncoding(
-        n_input_dims=3,
+        n_input_dims=4,
         n_output_dims=3,
         encoding_config=hash_cfg["encoding"],
         network_config=hash_cfg["network"],
@@ -117,10 +122,22 @@ def appearance_training_loop(cfg, device = 'cuda'):
                                                     lr_delay_mult=cfg.texture_lr_delay_mult,
                                                     max_steps=cfg.texture_lr_max_steps)
 
+    # l = [
+    #     {'params': list(indices_encoding.parameters()),
+    #     'lr': 1e-2,
+    #     "name": "texture"},
+    #     {'params': list(pose_encoding.parameters()),
+    #     'lr': 1e-2,
+    #     "name": "texture"},
+    #     {'params': list(texture_network.parameters()),
+    #     'lr': 1e-2,
+    #     "name": "texture"}
+    # ]
+    
     l = [
         {'params': list(texture_mlp_dynamic.parameters()),
         'lr': 1e-2,
-        "name": "texture"}
+        "name": "texture"},
     ]
     optimizer_dynamic = torch.optim.Adam(l, lr=0.01)
     decay_rate = 0.99  # Adjust this to control the decay rate per epoch/step
@@ -140,6 +157,7 @@ def appearance_training_loop(cfg, device = 'cuda'):
         for it,sample in enumerate(dataloader):
               
             time = sample['time']
+            pose = sample['reduced_pose']
             idx = sample['idx']
             if cfg.model_type == 'Dress4D':
                 n_verts_cannonical_before = garment_skinning_function(n_verts_cannonical.unsqueeze(0).detach(), sample['pose'], sample['betas'], body, garment_skinning, sample['translation'])
@@ -151,13 +169,15 @@ def appearance_training_loop(cfg, device = 'cuda'):
     
             face_centers = calculate_face_centers(n_verts_cannonical, source_faces)
             time_extended = time[None, ...].repeat(face_centers.shape[0], 1)
+            pose_extended = pose.repeat(face_centers.shape[0], 1)
             input = SimpleNamespace(
                         n_verts = n_verts_cannonical,
                         n_faces = source_faces,
                         face_centers = face_centers,
                         face_normals = face_normals,
                         time = time,
-                        time_extended = time_extended
+                        time_extended = time_extended,
+                        pose_extended = pose_extended
                     )
             residual_jacobians = cloth_deform.forward(input)
             residual_jacobians = residual_jacobians.view(residual_jacobians.shape[0],3,3)
@@ -171,13 +191,24 @@ def appearance_training_loop(cfg, device = 'cuda'):
             
             new_vertices = new_vertices.squeeze(0)   
             time = sample['time']
+            pose = sample['reduced_pose_eight']
             time_extended = time[None, None, ...].repeat(img_pixel_indices.shape[0], img_pixel_indices.shape[1], 1) 
-
+            pose_extended = pose[None, ...].repeat(img_pixel_indices.shape[0], img_pixel_indices.shape[1], 1)
             if cfg.use_dynamic_texture and e >=  cfg.texture_warm_ups:
                 
-                tex_coords = torch.cat((img_pixel_indices, time_extended), dim  = 2).view(-1,3)
-                uv_tex_dynamic = texture_mlp_dynamic(tex_coords.view(-1,3))
+                # tex_coords = torch.cat((img_pixel_indices, time_extended), dim  = 2).view(-1,3)
+                # uv_tex_dynamic = texture_mlp_dynamic(tex_coords.view(-1,3))
+                # uv_tex_dynamic = uv_tex_dynamic.view(img_pixel_indices.shape[0], img_pixel_indices.shape[1], 3)
+                
+                tex_coords = torch.cat((img_pixel_indices, pose_extended), dim  = 2).view(-1,4)
+                uv_tex_dynamic = texture_mlp_dynamic(tex_coords.view(-1,4))
                 uv_tex_dynamic = uv_tex_dynamic.view(img_pixel_indices.shape[0], img_pixel_indices.shape[1], 3)
+
+                # tex_coords = img_pixel_indices
+                # pose_encoded = pose_encoding(pose_extended.view(-1,pca_tex_dim))
+                # texture_encoded = indices_encoding(tex_coords.view(-1,2))
+                # uv_tex_dynamic = texture_network(torch.cat((texture_encoded, pose_encoded), dim = 1))
+                # uv_tex_dynamic = uv_tex_dynamic.view(img_pixel_indices.shape[0], img_pixel_indices.shape[1], 3)
             
                 # val = warm_up(e - cfg.texture_warm_ups)
                 # uv_tex_dynamic = uv_tex_dynamic * val
@@ -224,7 +255,7 @@ def appearance_training_loop(cfg, device = 'cuda'):
 
         save_any_image(uv_tex_soft_max,os.path.join(output_path, 'logs', f"save_tex_{e}.png"))
         print(f"Epoch {e} loss {loss_each_epoch}")
-        print(f"Texturedd Image {textured_image_masked[textured_image_masked > 0].mean()}")
+        # print(f"Texturedd Image {textured_image_masked[textured_image_masked > 0].mean()}")
         
     torch.save(uv_tex_static, os.path.join(output_path, 'texture_mlp_static.pt'))
     torch.save(uvs, os.path.join(output_path, 'uvs.pt'))

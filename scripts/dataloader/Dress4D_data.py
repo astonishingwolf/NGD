@@ -36,18 +36,13 @@ class MonocularDataset4DDress(Dataset):
         cfg : 
             Configuration object.
         """
-        
-
         start_end = [cfg.start_frame, cfg.end_frame]
         self.mv, self.proj, self.pose, self.betas, self.translation = load_camera_and_smpl_dress4d(cfg,cfg.smpl_pkl,start_end)
         self.reduced_pose = calculate_pca(self.pose)
-        # breakpoint()
-        # with open(cfg.template_smpl_pkl, 'rb') as f:
-        #     body_data = pickle.load(f, encoding='latin1')
-        # self.betas = torch.tensor(body_data['shape']).to(DEVICE)
-        # self.betas = self.betas[None].repeat(len(self.mv),1)
-        # breakpoint()
-
+        self.reduced_pose_eight = calculate_pca(self.pose, dim=2)
+        shift = 1
+        self.mv_left = torch.cat([self.mv[shift:], self.mv[:shift]])  
+        self.mv_right = torch.cat([self.mv[-shift:], self.mv[:-shift]]) 
         self.time_iterators = torch.linspace(0, 1, len(self.mv)).to(DEVICE)
         self.orig_image = get_targets_diffuse(cfg.target_images, cfg.image_size, start_end, cfg.skip_frames)
         self.target_diffuse = get_targets_diffuse(cfg.target_diffuse_maps, cfg.image_size, start_end,cfg.skip_frames)
@@ -58,16 +53,16 @@ class MonocularDataset4DDress(Dataset):
         self.target_depth = get_targets_npy(cfg.target_depth, cfg.image_size,start_end,cfg.skip_frames)
         self.target_norm_map = get_targets_normal(cfg.target_normal, cfg.image_size,start_end,cfg.skip_frames)
         self.iterator_helper = torch.arange(start_end[0],start_end[1],cfg.skip_frames)
-        # breakpoint()
-
+        
     def __len__(self) -> int:
         return len(self.target_diffuse)
 
     def __getitem__(self, idx: int):
         
         sample = {}
-        # idx = 35
         sample['mv'] = self.mv[idx]
+        sample['mv_left'] = self.mv_left[idx]
+        sample['mv_right'] = self.mv_right[idx]
         sample['proj'] = self.proj[idx]
         sample['time'] = self.time_iterators[idx]
         sample['target_diffuse'] = self.target_diffuse[idx]
@@ -79,6 +74,7 @@ class MonocularDataset4DDress(Dataset):
         sample['target_norm_map'] = self.target_norm_map[idx]
         sample['tex_image'] = self.orig_image[idx]
         sample['reduced_pose'] = self.reduced_pose[idx]
+        sample['reduced_pose_eight'] =  self.reduced_pose_eight[idx]
         sample['pose'] = self.pose[idx]
         sample['betas'] = self.betas[idx]
         sample['translation'] = self.translation[idx]
