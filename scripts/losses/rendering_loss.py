@@ -73,7 +73,7 @@ class RenderingLoss(nn.Module):
         l1_rendering_loss = l1_avg(train_render, targets.train_target_render)
         rendering_loss =  (1.0 - self.lambda_dssim) * l1_rendering_loss + self.lambda_dssim * (1.0 - ssim(train_render, targets.train_target_render)) + shil_loss * self.shil_loss
         loss_shad = rendering_loss* self.weight
-
+        # breakpoint()
         # Normal_Supervison
         # train_render = predictions.train_norm.permute(0,3,1,2)
         # train_render = torch.mul(train_render,targets.train_target_render_shil)

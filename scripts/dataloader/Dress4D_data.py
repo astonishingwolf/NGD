@@ -58,7 +58,8 @@ class MonocularDataset4DDress(Dataset):
         self.target_depth = get_targets_npy(cfg.target_depth, cfg.image_size,start_end,cfg.skip_frames)
         self.target_norm_map = get_targets_normal(cfg.target_normal, cfg.image_size,start_end,cfg.skip_frames)
         self.iterator_helper = torch.arange(start_end[0],start_end[1],cfg.skip_frames)
-        
+        # breakpoint()
+
     def __len__(self) -> int:
         return len(self.target_diffuse)
 

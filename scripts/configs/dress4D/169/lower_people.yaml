@@ -9,7 +9,7 @@ timeloop:
   start_frame : 0
   end_frame : 100
   skip_frames : 1
-  warm_ups : 100
+  warm_ups : 2000
   warm_ups_remesh : 400
   remesh_freq : 200
   batch_size : 1
@@ -39,7 +39,7 @@ timeloop:
 
 
   # Save Paths
-  output_path: /hdd_data/nakul/soham/Results/Dress4D/169/Remeshed/lower
+  output_path: /hdd_data/nakul/soham/Results/Dress4D/169/Non_Dynamic/lower
   Exp_name : hopefully_final
 
   save_instance : True

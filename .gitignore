@@ -1,4 +1,5 @@
 packages/
+scripts/configs
 assests/
 runs/
 scripts/models/core/tiny-cuda-nn

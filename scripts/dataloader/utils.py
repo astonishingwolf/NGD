@@ -55,6 +55,7 @@ def get_targets_diffuse(normal_dir, image_size, start_end, skip, DEVICE = 'cuda'
         normal_tensor = trans(normal_img)
         normal_tensor = normal_tensor.to(DEVICE)
         diffuse_imgs.append(normal_tensor)
+        
 
     #         
     diffuse_img_stacked = torch.stack(diffuse_imgs)

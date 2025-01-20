@@ -9,11 +9,11 @@ timeloop:
   start_frame : 0
   end_frame : 100
   skip_frames : 1
-  warm_ups : 100
+  warm_ups : 10000
   warm_ups_remesh : 400
   remesh_freq : 200
   batch_size : 1
-  model : hashgrid
+  model : hashgrid_vd
   hidden_layers : 3
   pose_noise : False
   noise_level : 0.002
@@ -39,7 +39,7 @@ timeloop:
 
 
   # Save Paths
-  output_path: /hdd_data/nakul/soham/Results/Dress4D/185/Remeshed/upper
+  output_path: /hdd_data/nakul/soham/Results/Dress4D/185/Non_Remeshed/upper
   Exp_name : hopefully_final
 
 
