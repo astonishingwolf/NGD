@@ -150,7 +150,7 @@ def appearance_training_loop(cfg, device = 'cuda'):
     img_pixel_indices = img_pixel_indices / 1024.0
     warm_up = get_linear_interpolation_func(0, 1, max_steps = 100)
     
-    for e in range(cfg.tex_epochs):
+    for e in range(cfg.tlex_epochs):
 
         loss_each_epoch = 0.0
         

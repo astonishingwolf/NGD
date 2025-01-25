@@ -57,18 +57,19 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
     output_path = os.path.join(cfg.output_path, cfg.Exp_name)
     remesh_dir = os.path.join(output_path, 'remeshed_template')
     # body = smpl.SMPL(cfg.smpl_path).to(device)
-    with open(cfg.template_smpl_pkl, 'rb') as f:
-        body_data = pickle.load(f, encoding='latin1')
-    templpate_smpl_shape = torch.tensor(body_data['shape']).to(device)
     body = smpl.SMPL(cfg.smpl_path).to(device)
-    body.update_shape(shape = templpate_smpl_shape)
-    jacobian_source = SourceMesh.SourceMesh(0, os.path.join(remesh_dir, f'source_mesh.obj'), {}, 1, ttype=torch.float)
-    # jacobian_source = SourceMesh.SourceMesh(0, cfg.mesh, {}, 1, ttype=torch.float)
+    if cfg.custom_template:
+        with open(cfg.template_smpl_pkl, 'rb') as f:
+            body_data = pickle.load(f, encoding='latin1')
+        templpate_smpl_shape = torch.tensor(body_data['shape']).to(device)
+        body.update_shape(shape = templpate_smpl_shape)
+    # jacobian_source = SourceMesh.SourceMesh(0, os.path.join(remesh_dir, f'source_mesh.obj'), {}, 1, ttype=torch.float)
+    jacobian_source = SourceMesh.SourceMesh(0, cfg.mesh, {}, 1, ttype=torch.float)
 
     jacobian_source.load()
     jacobian_source.to(device)
     sources_vertices,source_faces = load_mesh_path(os.path.join(remesh_dir, f'source_mesh.obj'), scale = -2, device = 'cuda')
-    # sources_vertices,source_faces = load_mesh_path(cfg.mesh, scale = -2, device = 'cuda')
+    sources_vertices,source_faces = load_mesh_path(cfg.mesh, scale = -2, device = 'cuda')
     tri_mesh_source = trimesh.Trimesh(vertices=sources_vertices.detach().cpu().numpy(), faces=source_faces.clone().cpu().numpy())
     tri_mesh_source.export(os.path.join(output_path,f'mesh_source.obj')) 
     source_faces = source_faces.to(torch.int64)
@@ -215,7 +216,7 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
                     tex_coords = torch.cat((img_pixel_indices, pose_extended), dim  = 2).view(-1,4)
                     uv_tex_dynamic = texture_mlp_dynamic(tex_coords.view(-1,4))
                     uv_tex_dynamic = uv_tex_dynamic.view(img_pixel_indices.shape[0], img_pixel_indices.shape[1], 3)
-
+                    uv_tex_total = uv_tex_static + uv_tex_dynamic
                     # tex_coords = torch.cat((img_pixel_indices, time_extended_texture), dim  = 2).view(-1,3)
                     # # tex_coords = torch.cat((img_pixel_indices, time_extended), dim  = 2).view(-1,3)
                     # uv_tex_dynamic = texture_mlp_dynamic(tex_coords.view(-1,3))
@@ -224,8 +225,8 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
                 else:
                     uv_tex_total = uv_tex_static
                 # breakpoint()
-                uv_tex_total = uv_tex_static + uv_tex_dynamic
-                # uv_tex_total = torch.clamp(uv_tex_total, 0, 1)
+                
+                uv_tex_total = torch.clamp(uv_tex_total, 0, 1)
                 r_mvp = torch.matmul(sample['proj'], sample['mv'])
                 textured_image = render_texture(glctx, r_mvp, new_vertices, source_faces.to(torch.int32), uvs, indices, uv_tex_total , 1080, True, max_mip_level) 
                 texture_images.append(textured_image)

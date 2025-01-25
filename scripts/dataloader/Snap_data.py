@@ -11,6 +11,26 @@ import glob
 from scripts.dataloader.utils import *
 DEVICE = 'cuda'
 
+def calculate_pca_people_snap(pose_data, dim=4):
+
+    if dim > pose_data.shape[1]:
+        raise ValueError(f"Reduction dimension ({dim}) cannot be larger than input dimension ({pose_data.shape[1]})")
+    # breakpoint()
+    pose_data[:,:3] = pose_data[:,:3] * 0.0
+
+    mean_pose = torch.mean(pose_data, dim=0)
+    centered_data = pose_data - mean_pose
+    cov_matrix = torch.mm(centered_data.T, centered_data) / (pose_data.shape[0] - 1)
+    eigenvalues, eigenvectors = torch.linalg.eigh(cov_matrix)
+    sorted_indices = torch.argsort(eigenvalues, descending=True)
+    eigenvalues = eigenvalues[sorted_indices]
+    eigenvectors = eigenvectors[:, sorted_indices]
+    
+    top_eigenvectors = eigenvectors[:, :dim]
+    reduced_pose = torch.mm(centered_data, top_eigenvectors)
+    
+    return reduced_pose
+
 class MonocularDataset(Dataset):
     def __init__(self, cfg):
 
@@ -20,9 +40,13 @@ class MonocularDataset(Dataset):
         cfg : 
             Configuration object.
         """
-        
         start_end = [cfg.start_frame, cfg.end_frame]
         self.mv, self.proj, self.pose, self.betas = load_camera_and_smpl(cfg,cfg.smpl_pkl,start_end)
+        self.reduced_pose = calculate_pca_people_snap(self.pose.clone())
+        self.reduced_pose_eight = calculate_pca_people_snap(self.pose.clone(), dim=2)
+        shift = 1
+        self.mv_left = torch.cat([self.mv[shift:], self.mv[:shift]])  
+        self.mv_right = torch.cat([self.mv[-shift:], self.mv[:-shift]]) 
         self.time_iterators = torch.linspace(0, 1, len(self.mv)).to(DEVICE)
         self.orig_image = get_targets_diffuse(cfg.target_images, cfg.image_size, start_end, cfg.skip_frames)
         self.target_diffuse = get_targets_diffuse(cfg.target_diffuse_maps, cfg.image_size, start_end,cfg.skip_frames)
@@ -42,18 +66,23 @@ class MonocularDataset(Dataset):
         
         sample = {}
         sample['mv'] = self.mv[idx]
+        sample['mv_left'] = self.mv_left[idx]
+        sample['mv_right'] = self.mv_right[idx]
         sample['proj'] = self.proj[idx]
         sample['time'] = self.time_iterators[idx]
         sample['target_diffuse'] = self.target_diffuse[idx]
         sample['target_shil'] = self.target_shil[idx]
+        # sample['target_shil_seg'] = self.target_shil_seg[idx]
         sample['target_complete_shil'] = self.target_complete_shil[idx]
-        # sample['target_norm_map'] = self.target_norm_map[idx]
+        sample['hands_shil'] = self.target_hands_shil[idx]
         sample['target_depth'] = self.target_depth[idx]
         sample['target_norm_map'] = self.target_norm_map[idx]
-        sample['hands_shil'] = self.target_hands_shil[idx]
         sample['tex_image'] = self.orig_image[idx]
+        sample['reduced_pose'] = self.reduced_pose[idx]
+        sample['reduced_pose_eight'] =  self.reduced_pose_eight[idx]
         sample['pose'] = self.pose[idx]
         sample['betas'] = self.betas[idx]
+        # sample['translation'] = self.translation[idx]
         sample['idx'] = self.iterator_helper[idx]
         
         return sample

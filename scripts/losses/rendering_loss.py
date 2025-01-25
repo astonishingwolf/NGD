@@ -61,19 +61,18 @@ class RenderingLoss(nn.Module):
         train_shil_withouthand = train_shil_withouthand.to(torch.float32)
 
         # shil_intersection = torch.mul(train_shil,targets.train_target_render_shil)
-        shil_loss = F.mse_loss(with_cloth, targets.train_target_complete)
+        # shil_loss = F.mse_loss(with_cloth, targets.train_target_complete)
         # shil_loss = F.mse_loss(train_shil, targets.train_target_render_shil)
         # l1_rendering_loss = l1_avg(train_norm, targets.target_norm_map)
 
         # Default
         train_render = torch.mul(train_render,targets.train_target_render_shil)
-        # shil_loss = F.mse_loss(train_shil_withouthand, targets.train_target_render_shil)
-        shil_loss = F.mse_loss(with_cloth, targets.train_target_complete)
-        # breakpoint()
+        shil_loss = F.mse_loss(train_shil_withouthand, targets.train_target_render_shil)
+        # shil_loss = F.mse_loss(with_cloth, targets.train_target_complete)
         l1_rendering_loss = l1_avg(train_render, targets.train_target_render)
         rendering_loss =  (1.0 - self.lambda_dssim) * l1_rendering_loss + self.lambda_dssim * (1.0 - ssim(train_render, targets.train_target_render)) + shil_loss * self.shil_loss
         loss_shad = rendering_loss* self.weight
-        # breakpoint()
+        
         # Normal_Supervison
         # train_render = predictions.train_norm.permute(0,3,1,2)
         # train_render = torch.mul(train_render,targets.train_target_render_shil)
@@ -85,7 +84,6 @@ class RenderingLoss(nn.Module):
         # rendering_loss = l1_rendering_loss + shil_loss * self.shil_loss
         # loss_shad = rendering_loss* self.weight
 
-        # breakpoint()
         # loss_depth = get_depth_loss(predictions.train_depth, targets.train_target_depth)
         # Hash Grid Specific
         # loss = (train_render - targets.train_target_render) ** 2 / (train_render.detach() ** 2 + 0.01) + \

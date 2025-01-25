@@ -28,39 +28,39 @@ class Regularization(nn.Module):
         identity = torch.eye(3, 3, device = self.device)
 
         ## Previous Regularizer 
-        # ## Start here
-        # identity = torch.eye(3, 3, device = self.device)
-        # expanded_identity = identity.expand(predictions.iter_jacobians.shape)
-        # expanded_masks = ~predictions.face_masks.unsqueeze(-1).expand(-1, -1, 3)
-        # zeros = torch.zeros(3, 3, device = self.device)
-        # expanded_zeros = zeros.expand(predictions.residual_jacobians.shape)
-        # predictions.iter_jacobians = torch.where(
-        #     expanded_masks,
-        #     expanded_identity,
-        #     predictions.iter_jacobians
+        ## Start here
+        identity = torch.eye(3, 3, device = self.device)
+        expanded_identity = identity.expand(predictions.iter_jacobians.shape)
+        expanded_masks = ~predictions.face_masks.unsqueeze(-1).expand(-1, -1, 3)
+        zeros = torch.zeros(3, 3, device = self.device)
+        expanded_zeros = zeros.expand(predictions.residual_jacobians.shape)
+        predictions.iter_jacobians = torch.where(
+            expanded_masks,
+            expanded_identity,
+            predictions.iter_jacobians
+        )
+        expanded_masks_residual = predictions.face_masks.unsqueeze(-1).expand(-1, -1, 3)
+        # predictions.residual_jacobians = torch.where(
+        #     expanded_masks_residual,
+        #     expanded_zeros,
+        #     predictions.residual_jacobians
         # )
-        # expanded_masks_residual = predictions.face_masks.unsqueeze(-1).expand(-1, -1, 3)
-        # # predictions.residual_jacobians = torch.where(
-        # #     expanded_masks_residual,
-        # #     expanded_zeros,
-        # #     predictions.residual_jacobians
-        # # )
         # U, S, Vh = torch.linalg.svd(predictions.iter_jacobians.clone().detach())
         # rotation_transpose = torch.matmul(U, Vh)
         # nearest_rotation = torch.transpose(rotation_transpose, -2, -1)
         # iter_loss = (((predictions.iter_jacobians) - nearest_rotation) ** 2).mean()
-        # # breakpoint()
-        # # iter_loss = (((predictions.iter_jacobians) - torch.eye(3, 3, device = self.device)) ** 2).mean()
-        # residual_loss = (((predictions.residual_jacobians) - torch.zeros(3, 3, device = self.device)) ** 2).mean()
-        # r_loss = iter_loss + residual_loss
+        iter_loss = (((predictions.iter_jacobians) - torch.eye(3, 3, device = self.device)) ** 2).mean()
+        residual_loss = (((predictions.residual_jacobians) - torch.zeros(3, 3, device = self.device)) ** 2).mean()
+        r_loss = iter_loss + residual_loss
         ## End here
 
 
         ## New Regularizer
         ## Start here
-        iter_loss = (((predictions.iter_jacobians) - torch.eye(3, 3, device = self.device)) ** 2).mean()
-        r_loss = iter_loss 
+        # iter_loss = (((predictions.iter_jacobians) - torch.eye(3, 3, device = self.device)) ** 2).mean()
+        # r_loss = iter_loss 
         ## Enf here
+        
         loss = (loss_edge + loss_normal + loss_laplacian)*self.weight + r_loss * 0.25
         loss_dict = {
             'loss_regularization' : loss,

@@ -121,6 +121,7 @@ def geometry_training_loop(cfg,device):
                 pose_extended = pose.repeat(cloth_optim.template_face_centers.shape[0], 1)
 
             if e >= cfg.warm_ups:
+                # breakpoint()
                 cannonical_verts, cannonical_faces = cloth_optim.get_mesh_attr_from_jacobians(cloth_optim.cannonical_jacobians.detach())
                 
                 if cfg.model_type == 'Dress4D':

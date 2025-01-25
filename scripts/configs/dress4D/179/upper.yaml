@@ -9,11 +9,11 @@ timeloop:
   start_frame : 0
   end_frame : 100
   skip_frames : 1
-  warm_ups : 300
+  warm_ups : 100
   warm_ups_remesh : 400
   remesh_freq : 200
   batch_size : 1
-  model : general
+  model : hashgrid_vd
   hidden_layers : 3
   pose_noise : False
   noise_level : 0.002
@@ -26,7 +26,7 @@ timeloop:
   create_new_optimizer : False
   gradient_clipping : True
   interpolate_new_optimizer : True
-
+  custom_template : True
 
   #Remeshing
   remesh_percentile : 0.9
@@ -39,9 +39,10 @@ timeloop:
 
 
   # Save Paths
-  output_path: /hdd_data/nakul/soham/Dress4DRecon_Ortho/179/upper
-  Exp_name : Remeshed
-  save_instance : False
+  output_path: /hdd_data/nakul/soham/Results/179/upper
+  Exp_name : Remeshed_GT
+
+  save_instance : True
   save_index : 35
 
   remesh_percentile : 0.8
@@ -50,13 +51,16 @@ timeloop:
   # Input Paths
   smpl_path : /home/nakul/soham/3d/fixnormalndepth/SMPL_NEUTRAL.pkl
   smpl_pkl : /hdd_data/nakul/soham/Dataset/Dress4D/processed/179/Take6/smpl/combined_smpl_camera.pkl
-  mesh:  /hdd_data/nakul/soham/Template_dir/Tshirt/tshirt.obj
+  template_smpl_pkl : /hdd_data/nakul/soham/Template_dir/Dress4D/179/smpl.pkl
+  mesh: /hdd_data/nakul/soham/Template_dir/Dress4D/179/upper/mesh.obj  
   target_diffuse_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/179/Take6/upper_cloth/diffuse_seg
   target_shil_maps :  /hdd_data/nakul/soham/Dataset/Dress4D/processed/179/Take6/upper_cloth/shil
   target_shil_seg_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/179/Take6/upper_cloth/shil_seg
   target_complete_shil_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/179/Take6/human/shil
-  target_hand_mask : /hdd_data/nakul/soham/Dataset/Dress4D/processed/179/Take6/hands_mask
+  target_hand_mask : /hdd_data/nakul/soham/Dataset/Dress4D/processed/179/Take6/human/hands_mask
+  target_normal : /hdd_data/nakul/soham/Dataset/Dress4D/processed/179/Take6/human/sapien_norm
   # target_normal : /hdd_data/nakul/soham/Dataset/People_Snapshot/male-4-sport/norm_seg
+  target_depth : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/sapien_depth
   target_images : /hdd_data/nakul/soham/Dataset/Dress4D/processed/179/Take6/upper_cloth/textured_seg
   image_size : 1080   
 
@@ -73,7 +77,8 @@ timeloop:
     RenderingLoss: 5.0
     Regularization: 0.0
     StVKLoss: 1.0
-    BendingLoss: 1.0  
+    BendingLoss: 1.0 
+    DepthDistillation : 1.0
 
   #Logging
   logging : False
@@ -86,13 +91,13 @@ timeloop:
   log_light_power: 3.0
 
    ## Texture
-  texture_recon : True
+  texture_recon : False
   texture_lr_base : 0.002
   texture_lr_base_dyn : 0.002
   texture_map : [1024,1024]
   max_mip_level : 3
   tex_epochs : 1000
-  texture_warm_ups : 300
+  texture_warm_ups : 100
   use_dynamic_texture : True
   texture_lr_init : 0.0016 
   texture_lr_final : 0.000016
