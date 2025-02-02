@@ -181,8 +181,14 @@ def geometry_training_loop(cfg,device):
             train_target_render,train_target_render_shil, target_complete_shil = sample['target_diffuse'].to('cuda'),sample['target_shil'].to('cuda'), sample['target_complete_shil'].to('cuda')
             train_target_depth = sample['target_depth'].to('cuda')
             train_target_normal = (sample['target_norm_map'].to('cuda') + 1)/2
+            
             if cfg.save_instance and sample['idx'][0] == cfg.save_index:
-                save_image(train_render.permute(0,3,1,2), os.path.join(save_image_dir_fr, f'output_{e}.png'))
+                # save_image(train_render.permute(0,3,1,2), os.path.join(save_image_dir_fr, f'output_{e}.png'))
+                renderer_back = AlphaRenderer(sample['mv_back'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])
+                _, render_info, rast_out = gt_manager_source.render(vertices_post_skinning, cloth_optim.cannonical_faces, renderer_back)
+                render_back = gt_manager_source.diffuse_images()
+                save_any_image(render_back, os.path.join(save_image_dir_fr, f'output_{e}.png'))
+                breakpoint()
 
             pred = SimpleNamespace(
                 pred_verts=vertices_post_skinning,

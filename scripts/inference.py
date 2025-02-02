@@ -63,13 +63,13 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
             body_data = pickle.load(f, encoding='latin1')
         templpate_smpl_shape = torch.tensor(body_data['shape']).to(device)
         body.update_shape(shape = templpate_smpl_shape)
-    # jacobian_source = SourceMesh.SourceMesh(0, os.path.join(remesh_dir, f'source_mesh.obj'), {}, 1, ttype=torch.float)
-    jacobian_source = SourceMesh.SourceMesh(0, cfg.mesh, {}, 1, ttype=torch.float)
+    jacobian_source = SourceMesh.SourceMesh(0, os.path.join(remesh_dir, f'source_mesh.obj'), {}, 1, ttype=torch.float)
+    # jacobian_source = SourceMesh.SourceMesh(0, cfg.mesh, {}, 1, ttype=torch.float)
 
     jacobian_source.load()
     jacobian_source.to(device)
     sources_vertices,source_faces = load_mesh_path(os.path.join(remesh_dir, f'source_mesh.obj'), scale = -2, device = 'cuda')
-    sources_vertices,source_faces = load_mesh_path(cfg.mesh, scale = -2, device = 'cuda')
+    # sources_vertices,source_faces = load_mesh_path(cfg.mesh, scale = -2, device = 'cuda')
     tri_mesh_source = trimesh.Trimesh(vertices=sources_vertices.detach().cpu().numpy(), faces=source_faces.clone().cpu().numpy())
     tri_mesh_source.export(os.path.join(output_path,f'mesh_source.obj')) 
     source_faces = source_faces.to(torch.int64)
@@ -149,7 +149,8 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
     os.makedirs(save_image_dir, exist_ok=True)
     save_image_dir = os.path.join(output_path,'save_img_texture_right')
     os.makedirs(save_image_dir, exist_ok=True)
-    
+    save_image_dir = os.path.join(output_path, 'save_img_back')
+    os.makedirs(save_image_dir, exist_ok=True)
     with torch.no_grad():
         for _,sample in enumerate(dataloader):
             time = sample['time']
@@ -245,11 +246,14 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
                 # textured_image_masked = torch.mul(textured_image, mask_front)
                 save_any_image(textured_image, os.path.join(output_path, 'save_img_texture_right',f'final_right_texture_{idx[0].detach().cpu().numpy()}.png'))
 
-            sample['mv'][:,2,2] = -1*sample['mv'][:,2,2]
-            renderer_back = AlphaRenderer(sample['mv'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])
+            # back_mv = sample['mv'].clone()
+            # back_mv[:,2,2] = -1 * back_mv[:,2,2]
+            # breakpoint()
+            renderer_back = AlphaRenderer(sample['mv_back'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])
             _, render_info,_ = gt_manager_source.render(new_vertices, source_faces, renderer_back)
             render_back = gt_manager_source.diffuse_images()
             back_images.append(render_back)
+            save_any_image(render_back, os.path.join(output_path, 'save_img_back',f'render_back{idx[0].detach().cpu().numpy()}.png'))
             tri_mesh = trimesh.Trimesh(vertices=new_vertices.detach().cpu().numpy(), faces = source_faces.cpu().numpy())
             tri_mesh.export(os.path.join(output_path, 'Meshes', f'output_target_{idx[0].detach().cpu().numpy()}.obj'))
             tri_mesh_cnannonical = trimesh.Trimesh(vertices=n_verts_cannonical_before.detach().cpu().numpy(), faces = source_faces.cpu().numpy())

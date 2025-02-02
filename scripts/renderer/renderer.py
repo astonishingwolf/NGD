@@ -47,9 +47,7 @@ class AlphaRenderer(NormalsRenderer):
         
         face_mask = torch.zeros_like(faces, dtype=torch.bool)    
         
-        unique_indices_visible = torch.unique(rast_out[..., 3].view(-1)).to(torch.int32) 
-        unique_indices_visible = unique_indices_visible[unique_indices_visible > 0] - 1
-        face_mask[unique_indices_visible] = True
+        
 
         vert_normals_hom = torch.cat((normals, torch.zeros(V,1,device=verts.device)),axis=-1) #V,3 -> V,4
         vert_normals_view = vert_normals_hom @ self._mv.transpose(-2,-1) #C,V,4
@@ -90,6 +88,10 @@ class AlphaRenderer(NormalsRenderer):
         depth_info = {'raw': depth, 'masks' : face_mask}
 
         # shillouette;
+        
+        unique_indices_visible = torch.unique(rast_out[..., 3].view(-1)).to(torch.int32) 
+        unique_indices_visible = unique_indices_visible[unique_indices_visible > 0] - 1
+        face_mask[unique_indices_visible] = True
         alpha = torch.clamp(rast_out[..., [-1]], max=1) #C,H,W,1
         
         col = torch.concat((pixel_normals_view, diffuse, depth, alpha),dim=-1) #C,H,W,5

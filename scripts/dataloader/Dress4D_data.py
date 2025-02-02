@@ -43,6 +43,8 @@ class MonocularDataset4DDress(Dataset):
         shift = 1
         self.mv_left = torch.cat([self.mv[shift:], self.mv[:shift]])  
         self.mv_right = torch.cat([self.mv[-shift:], self.mv[:-shift]]) 
+        shift = 10
+        self.mv_back = torch.cat([self.mv[shift:], self.mv[:shift]])
         self.time_iterators = torch.linspace(0, 1, len(self.mv)).to(DEVICE)
         self.orig_image = get_targets_diffuse(cfg.target_images, cfg.image_size, start_end, cfg.skip_frames)
         self.target_diffuse = get_targets_diffuse(cfg.target_diffuse_maps, cfg.image_size, start_end,cfg.skip_frames)
@@ -63,6 +65,7 @@ class MonocularDataset4DDress(Dataset):
         sample['mv'] = self.mv[idx]
         sample['mv_left'] = self.mv_left[idx]
         sample['mv_right'] = self.mv_right[idx]
+        sample['mv_back'] = self.mv_back[idx]
         sample['proj'] = self.proj[idx]
         sample['time'] = self.time_iterators[idx]
         sample['target_diffuse'] = self.target_diffuse[idx]

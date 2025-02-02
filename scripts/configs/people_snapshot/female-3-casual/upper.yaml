@@ -2,9 +2,8 @@ gpu: 0
 seed: 99
 
 timeloop:
-  # Model Params
   model_type : PeopleSnapshot
-  num_epochs : 300
+  num_epochs : 1200
   device : cuda:0
   start_frame : 1
   end_frame : 400
@@ -40,7 +39,7 @@ timeloop:
 
   # Save Paths
   output_path: /hdd_data/nakul/soham/Results/PeopleSnapshot/female-3-casual/Remeshed/upper
-  Exp_name : Final_fix
+  Exp_name : Final_trial3
 
 
   save_instance : True
