@@ -61,7 +61,7 @@ class Regularization(nn.Module):
         r_loss = iter_loss 
         ## Enf here
         
-        loss = (loss_normal + loss_laplacian)*self.weight + r_loss * 0.25
+        loss = (loss_normal + loss_laplacian)*0.1 + r_loss * 0.25
         # breakpoint()
         loss_dict = {
             'loss_regularization' : loss,

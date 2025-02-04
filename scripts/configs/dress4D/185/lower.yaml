@@ -22,7 +22,7 @@ timeloop:
   stop_train_after_warmup : True
   use_grad_clipping : False
   retriangulate: 0
-  remeshing : False
+  remeshing : True
   create_new_optimizer : False
   gradient_clipping : True
   interpolate_new_optimizer : True
@@ -40,7 +40,7 @@ timeloop:
 
   # Save Paths
   output_path: /hdd_data/nakul/soham/New_Results/Dress4DRecon_Ortho/185/lower
-  Exp_name : Remeshed_HashGrid_w_Normal
+  Exp_name : Remeshed_trial
 
 
   save_instance : True

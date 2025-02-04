@@ -112,7 +112,6 @@ def geometry_training_loop(cfg,device):
                 time_extended = time[None, ...].repeat(cloth_optim.template_face_centers.shape[0], 1) + ast_noise
             else:
                 time_extended = time[None, ...].repeat(cloth_optim.template_face_centers.shape[0], 1)
-            # breakpoint()
             if cfg.model_type == 'Dress4D':
                 pose_extended = pose.repeat(cloth_optim.template_face_centers.shape[0], 1)
             elif cfg.pose_noise:
@@ -121,14 +120,15 @@ def geometry_training_loop(cfg,device):
                 pose_extended = pose.repeat(cloth_optim.template_face_centers.shape[0], 1)
 
             if e >= cfg.warm_ups:
-                # breakpoint()
                 cannonical_verts, cannonical_faces = cloth_optim.get_mesh_attr_from_jacobians(cloth_optim.cannonical_jacobians.detach())
                 
                 if cfg.model_type == 'Dress4D':
                     vertices_post_skinning_cannonical = garment_skinning_function(cannonical_verts.unsqueeze(0), sample['pose'], \
                                                                         sample['betas'], cloth_optim.body, cloth_optim.template_garment_skinning, sample['translation'])
                 else:
-                    vertices_post_skinning_cannonical = garment_skinning_function(cannonical_verts.unsqueeze(0), sample['pose'], \
+                    skinned_pose = sample['pose'].clone()
+                    skinned_pose[...,:3] = skinned_pose[...,:3] * 0.0
+                    vertices_post_skinning_cannonical = garment_skinning_function(cannonical_verts.unsqueeze(0), skinned_pose, \
                                                                         sample['betas'], cloth_optim.body, cloth_optim.template_garment_skinning)
 
                 vertices_post_skinning_cannonical = vertices_post_skinning_cannonical.squeeze(0)
@@ -163,7 +163,6 @@ def geometry_training_loop(cfg,device):
             if cfg.vertex_noise:
                 vertex_noise = cfg.noise_level * torch.randn(vertices_post_skinning.shape[0], 3, device='cuda')* cam_data.__len__() * smooth_term((e+1) * cam_data.__len__() + it)      
                 vertices_post_skinning = vertices_post_skinning + vertex_noise
-                # breakpoint()
 
             deformed_mesh_p3d = Meshes(verts = [vertices_post_skinning], faces = [cloth_optim.cannonical_faces])               
             renderer = AlphaRenderer(sample['mv'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])  
@@ -183,12 +182,12 @@ def geometry_training_loop(cfg,device):
             train_target_normal = (sample['target_norm_map'].to('cuda') + 1)/2
             
             if cfg.save_instance and sample['idx'][0] == cfg.save_index:
-                # save_image(train_render.permute(0,3,1,2), os.path.join(save_image_dir_fr, f'output_{e}.png'))
-                renderer_back = AlphaRenderer(sample['mv_back'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])
-                _, render_info, rast_out = gt_manager_source.render(vertices_post_skinning, cloth_optim.cannonical_faces, renderer_back)
-                render_back = gt_manager_source.diffuse_images()
-                save_any_image(render_back, os.path.join(save_image_dir_fr, f'output_{e}.png'))
-                breakpoint()
+
+                save_image(train_render.permute(0,3,1,2), os.path.join(save_image_dir_fr, f'output_{e}.png'))
+                # renderer_back = AlphaRenderer(sample['mv_back'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])
+                # _, render_info, rast_out = gt_manager_source.render(vertices_post_skinning, cloth_optim.cannonical_faces, renderer_back)
+                # render_back = gt_manager_source.diffuse_images()
+                # save_any_image(render_back, os.path.join(save_image_dir_fr, f'output_{e}.png'))
 
             pred = SimpleNamespace(
                 pred_verts=vertices_post_skinning,
@@ -238,7 +237,6 @@ def geometry_training_loop(cfg,device):
                 writer.add_scalar('Training/Epoch', e, global_step)
                 writer.add_scalar('Training/Iteration', it, global_step)
 
-            # breakpoint()
             loss_each_epoch += loss.item()
             loss_rendering += loss_dict['loss_render'].item()
             loss_regularization += loss_dict['loss_regularization'].item()

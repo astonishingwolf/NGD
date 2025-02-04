@@ -65,6 +65,7 @@ class AlphaRenderer(NormalsRenderer):
         pixel_normals_view, _ = dr.interpolate(vert_normals_view, rast_out, faces)  #C,H,W,3
         diffuse = torch.sum(lightdir * pixel_normals_view, -1, keepdim=True)           #C,H,W,1
         diffuse = torch.clamp(diffuse, min=0.0, max=1.0)
+        front_mask = diffuse[..., 0] > 0
         diffuse = diffuse[..., [0, 0, 0]] #C,H,W,3
         # breakpoint()
         verts_clip_w = verts_clip[..., [3]]
@@ -77,23 +78,26 @@ class AlphaRenderer(NormalsRenderer):
 
         verts_depth = (verts_clip[..., [2]] / verts_clip_w)     
         depth, _ = dr.interpolate(verts_depth, rast_out, faces) 
-        
-        depth = (depth + 1.) * 0.5      # since depth in [-1, 1], normalize to [0, 1]
-        
+
+        unique_face_rast = torch.mul(rast_out[..., 3], front_mask.detach())
+        unique_indices_visible = torch.unique(unique_face_rast.view(-1)).to(torch.int32) 
+        unique_indices_visible = unique_indices_visible[unique_indices_visible > 0] - 1
+        face_mask[unique_indices_visible] = True
+        alpha = torch.clamp(rast_out[..., [-1]], max=1) #C,H,W,1        
+        depth = (depth + 1.) * 0.5      # since depth in [-1, 1], normalize to [0, 1        
         depth[rast_out[..., -1] == 0] = 1.0         # exclude background;
         depth = 1 - depth                           # C,H,W,1
         max_depth = depth.max()
         min_depth = depth[depth > 0.0].min()  # exclude background;
 
+        alpha = torch.mul(alpha, front_mask.unsqueeze(-1).detach())
+        depth = torch.mul(depth, front_mask.unsqueeze(-1).detach())
         depth_info = {'raw': depth, 'masks' : face_mask}
 
         # shillouette;
+
         
-        unique_indices_visible = torch.unique(rast_out[..., 3].view(-1)).to(torch.int32) 
-        unique_indices_visible = unique_indices_visible[unique_indices_visible > 0] - 1
-        face_mask[unique_indices_visible] = True
-        alpha = torch.clamp(rast_out[..., [-1]], max=1) #C,H,W,1
-        
+        # breakpoint()
         col = torch.concat((pixel_normals_view, diffuse, depth, alpha),dim=-1) #C,H,W,5
         col = dr.antialias(col, rast_out, verts_clip, faces) #C,H,W,5
         return col, depth_info,rast_out.clone()

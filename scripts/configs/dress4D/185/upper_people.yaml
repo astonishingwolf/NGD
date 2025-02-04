@@ -9,7 +9,7 @@ timeloop:
   start_frame : 0
   end_frame : 100
   skip_frames : 1
-  warm_ups : 10000
+  warm_ups : 100
   warm_ups_remesh : 400
   remesh_freq : 200
   batch_size : 1
@@ -40,7 +40,7 @@ timeloop:
 
   # Save Paths
   output_path: /hdd_data/nakul/soham/Results/Dress4D/185/Remeshed/upper
-  Exp_name : hopefully_final
+  Exp_name : Trial
 
 
   save_instance : True
@@ -92,7 +92,7 @@ timeloop:
   log_light_power: 3.0
 
   ## Texture
-  texture_recon : True
+  texture_recon : False
   texture_lr_base : 1e-4
   texture_lr_base_dyn : 1e-4
   texture_map : [1024,1024]
