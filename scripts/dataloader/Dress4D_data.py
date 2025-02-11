@@ -14,6 +14,7 @@ def calculate_pca(pose_data, dim=4):
     if dim > pose_data.shape[1]:
         raise ValueError(f"Reduction dimension ({dim}) cannot be larger than input dimension ({pose_data.shape[1]})")
     
+    # pose_data[:,:3] = pose_data[:,:3] * 0.0
     mean_pose = torch.mean(pose_data, dim=0)
     centered_data = pose_data - mean_pose
     cov_matrix = torch.mm(centered_data.T, centered_data) / (pose_data.shape[0] - 1)
@@ -55,7 +56,14 @@ class MonocularDataset4DDress(Dataset):
         self.target_depth = get_targets_npy(cfg.target_depth, cfg.image_size,start_end,cfg.skip_frames)
         self.target_norm_map = get_targets_normal(cfg.target_normal, cfg.image_size,start_end,cfg.skip_frames)
         self.iterator_helper = torch.arange(start_end[0],start_end[1],cfg.skip_frames)
+        self.target_depth = torch.mul(self.target_depth, self.target_complete_shil.squeeze(1))
+        min_vals =  self.target_depth.amin(dim=(1, 2), keepdim=True) 
+        max_vals =  self.target_depth.amax(dim=(1, 2), keepdim=True) 
+        self.target_depth_norm = ( self.target_depth - min_vals) / (max_vals - min_vals + 1e-8)  
+        # breakpoint()
         
+        # self.target_depth_norm = 1 - self.target_depth_norm
+        # self.target_depth_norm = self.target_depth
     def __len__(self) -> int:
         return len(self.target_diffuse)
 
@@ -73,7 +81,8 @@ class MonocularDataset4DDress(Dataset):
         sample['target_shil_seg'] = self.target_shil_seg[idx]
         sample['target_complete_shil'] = self.target_complete_shil[idx]
         sample['hands_shil'] = self.target_hands_shil[idx]
-        sample['target_depth'] = self.target_depth[idx]
+        # self.target_depth
+        sample['target_depth'] = self.target_depth_norm[idx]
         sample['target_norm_map'] = self.target_norm_map[idx]
         sample['tex_image'] = self.orig_image[idx]
         sample['reduced_pose'] = self.reduced_pose[idx]

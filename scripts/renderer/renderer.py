@@ -84,20 +84,19 @@ class AlphaRenderer(NormalsRenderer):
         unique_indices_visible = unique_indices_visible[unique_indices_visible > 0] - 1
         face_mask[unique_indices_visible] = True
         alpha = torch.clamp(rast_out[..., [-1]], max=1) #C,H,W,1        
-        depth = (depth + 1.) * 0.5      # since depth in [-1, 1], normalize to [0, 1        
-        depth[rast_out[..., -1] == 0] = 1.0         # exclude background;
-        depth = 1 - depth                           # C,H,W,1
+        depth = (depth + 1.) * 0.5      # since depth in [-1, 1], normalize to [0, 1 
+        # depth = 1 - depth    
+        depth[rast_out[..., -1] == 0] = 0.0    
+                # exclude background;
+                                   # C,H,W,1
         max_depth = depth.max()
         min_depth = depth[depth > 0.0].min()  # exclude background;
-
+        depth = (depth - min_depth) / (max_depth - min_depth)
+        # breakpoint()
         alpha = torch.mul(alpha, front_mask.unsqueeze(-1).detach())
         depth = torch.mul(depth, front_mask.unsqueeze(-1).detach())
         depth_info = {'raw': depth, 'masks' : face_mask}
 
-        # shillouette;
-
-        
-        # breakpoint()
         col = torch.concat((pixel_normals_view, diffuse, depth, alpha),dim=-1) #C,H,W,5
         col = dr.antialias(col, rast_out, verts_clip, faces) #C,H,W,5
         return col, depth_info,rast_out.clone()

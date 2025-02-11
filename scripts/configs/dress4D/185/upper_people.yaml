@@ -26,7 +26,7 @@ timeloop:
   create_new_optimizer : False
   gradient_clipping : True
   interpolate_new_optimizer : True
-  custom_template : False
+  custom_template : True
 
   #Remeshing
   remesh_percentile : 0.9
@@ -39,8 +39,8 @@ timeloop:
 
 
   # Save Paths
-  output_path: /hdd_data/nakul/soham/Results/Dress4D/185/Remeshed/upper
-  Exp_name : Trial
+  output_path: /hdd_data/nakul/soham/New_Results/Dress4D/185/Remeshed/upper
+  Exp_name : Final
 
 
   save_instance : True
@@ -78,7 +78,7 @@ timeloop:
     Regularization: 0.0
     StVKLoss: 1.0
     BendingLoss: 1.0 
-    DepthDistillation : 1.0
+    # DepthDistillation : 1.0
   
 
   #Logging

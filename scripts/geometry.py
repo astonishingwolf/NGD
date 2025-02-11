@@ -123,6 +123,8 @@ def geometry_training_loop(cfg,device):
                 cannonical_verts, cannonical_faces = cloth_optim.get_mesh_attr_from_jacobians(cloth_optim.cannonical_jacobians.detach())
                 
                 if cfg.model_type == 'Dress4D':
+                    # skinned_pose = sample['pose'].clone()
+                    # skinned_pose[...,:3] = skinned_pose[...,:3] * 0.0
                     vertices_post_skinning_cannonical = garment_skinning_function(cannonical_verts.unsqueeze(0), sample['pose'], \
                                                                         sample['betas'], cloth_optim.body, cloth_optim.template_garment_skinning, sample['translation'])
                 else:
@@ -240,8 +242,8 @@ def geometry_training_loop(cfg,device):
             loss_each_epoch += loss.item()
             loss_rendering += loss_dict['loss_render'].item()
             loss_regularization += loss_dict['loss_regularization'].item()
-            loss_depth += loss_dict['loss_depth'].item()
-
+            # loss_depth += loss_dict['loss_depth'].item()
+            loss_depth = 0.0
             # loss_rendering += 0
             # loss_regularization += 0
 

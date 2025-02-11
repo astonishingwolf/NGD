@@ -31,9 +31,10 @@ class HashGrid_w_pose(nn.Module):
     def forward(self, inputs) -> torch.Tensor:
         # breakpoint()
         pos_encoded = self.position_encoding(inputs.face_centers)
+        # pos_encoded = self.position_encoding(torch.cat((inputs.face_centers, inputs.pose_extended), dim=1))
         normal_encoded = self.normal_encoding(inputs.face_normals)
         pose_encoded = self.pose_encoding(inputs.pose_extended)
-        residual_jacobians = self.network(torch.cat((pos_encoded, normal_encoded, pose_encoded), dim=1))
+        residual_jacobians = self.network(torch.cat((pos_encoded, normal_encoded,pose_encoded), dim=1))
         
         return residual_jacobians
 
@@ -120,13 +121,13 @@ class GeneralSiren(nn.Module):
 
         self.template = template
         self.config = config
-        self.mlp = Siren(in_features = 7, out_features = 9, hidden_features = 256, 
+        self.mlp = Siren(in_features = 10, out_features = 9, hidden_features = 256, 
                 hidden_layers = self.config.hidden_layers, outermost_linear=True)
 
     def forward(self, inputs) -> torch.Tensor:
         
         residual_jacobians,_ = self.mlp(torch.cat((inputs.face_centers, inputs.face_normals,\
-            inputs.time_extended), dim=1))
+            inputs.pose_extended), dim=1))
         
         return residual_jacobians
     

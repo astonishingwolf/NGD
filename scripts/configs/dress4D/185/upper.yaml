@@ -40,7 +40,7 @@ timeloop:
 
   # Save Paths
   output_path: /hdd_data/nakul/soham/Dress4DRecon_Ortho/185/upper
-  Exp_name : Remeshed
+  Exp_name : Remeshed_TrialL1
 
   save_instance : False
   save_index : 35

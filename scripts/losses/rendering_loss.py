@@ -67,12 +67,20 @@ class RenderingLoss(nn.Module):
 
         # Default
         train_render = torch.mul(train_render,targets.train_target_render_shil)
-        shil_loss = F.mse_loss(train_shil_withouthand, targets.train_target_render_shil)
-        # shil_loss = F.mse_loss(with_cloth, targets.train_target_complete)
+        # shil_loss = F.mse_loss(train_shil_withouthand, targets.train_target_render_shil)
+        shil_loss = F.l1_loss(train_shil_withouthand, targets.train_target_render_shil)
+        # # shil_loss = F.mse_loss(with_cloth, targets.train_target_complete)
         l1_rendering_loss = l1_avg(train_render, targets.train_target_render)
         rendering_loss =  (1.0 - self.lambda_dssim) * l1_rendering_loss + self.lambda_dssim * (1.0 - ssim(train_render, targets.train_target_render)) + shil_loss * self.shil_loss
         loss_shad = rendering_loss* self.weight
         
+        #Another Try :
+        # train_render = torch.mul(train_render, targets.train_target_render_shil)
+        # shil_loss = F.l1_loss(train_shil_withouthand, targets.train_target_render_shil)  # Changed to L1 loss
+        # l2_rendering_loss = F.mse_loss(train_render, targets.train_target_render)  # Changed to L2 loss
+        # rendering_loss = (1.0 - self.lambda_dssim) * l2_rendering_loss + self.lambda_dssim * (1.0 - ssim(train_render, targets.train_target_render)) + shil_loss * self.shil_loss
+        # loss_shad = rendering_loss * self.weight
+
         # Normal_Supervison
         # train_render = predictions.train_norm.permute(0,3,1,2)
         # train_render = torch.mul(train_render,targets.train_target_render_shil)

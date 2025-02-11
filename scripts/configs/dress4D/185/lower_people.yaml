@@ -17,7 +17,7 @@ timeloop:
   hidden_layers : 3
   pose_noise : False
   noise_level : 0.002
-  vertex_noise : False
+  vertex_noise : True
   skinning_func : rbf  
   stop_train_after_warmup : True
   use_grad_clipping : False
@@ -39,8 +39,8 @@ timeloop:
 
 
   # Save Paths
-  output_path: /hdd_data/nakul/soham/Results/Dress4D/185/Remeshed/lower
-  Exp_name : Trial_with_smoothness
+  output_path: /hdd_data/nakul/soham/New_Results/Dress4D/185/Remeshed/lower
+  Exp_name : Final
 
   save_instance : True
   save_index : 10
@@ -77,7 +77,7 @@ timeloop:
     Regularization: 0.0
     StVKLoss: 1.0
     BendingLoss: 1.0 
-    DepthDistillation : 1.0
+    # DepthDistillation : 1.0
   
 
   #Logging

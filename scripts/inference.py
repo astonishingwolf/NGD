@@ -157,6 +157,7 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
             idx = sample['idx']
             pose = sample['reduced_pose']
             if cfg.model_type == 'Dress4D':
+                
                 n_verts_cannonical_before = garment_skinning_function(n_verts_cannonical.unsqueeze(0).detach(), sample['pose'], sample['betas'], body, garment_skinning, sample['translation'])
             else:
                 n_verts_cannonical_before = garment_skinning_function(n_verts_cannonical.unsqueeze(0).detach(), sample['pose'], sample['betas'], body, garment_skinning)

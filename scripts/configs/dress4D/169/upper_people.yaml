@@ -40,7 +40,7 @@ timeloop:
 
   # Save Paths
   output_path: /hdd_data/nakul/soham/Results/Dress4D/169/Remeshed/upper
-  Exp_name : Final_trial
+  Exp_name : Final
 
 
   save_instance : True

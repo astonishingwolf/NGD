@@ -39,7 +39,7 @@ timeloop:
 
 
   # Save Paths
-  output_path: /hdd_data/nakul/soham/Results/Dress4D/169/Remeshed_mask/lower
+  output_path: /hdd_data/nakul/soham/New_Results/Dress4D/169/Remeshed/lower
   Exp_name : Final
 
   save_instance : True
