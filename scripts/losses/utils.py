@@ -15,6 +15,7 @@ import packages.nvdiffmodeling.src.texture as texture
 import packages.nvdiffmodeling.src.renderutils as ru
 from torchvision.models import vgg19_bn
 from torchvision.models import VGG19_BN_Weights
+import torchvision.models as models
 
 device = 'cuda'
 class Vgg19(torch.nn.Module):
@@ -465,7 +466,8 @@ class VGGPerceptualLoss(torch.nn.Module):
         super(VGGPerceptualLoss, self).__init__()
         blocks = []
         pretrained = True
-        self.vgg_pretrained_features = models.vgg19(pretrained=pretrained).features
+        # self.vgg_pretrained_features = models.vgg19(pretrained=pretrained).features
+        self.vgg_pretrained_features = models.vgg19(pretrained=True).features.to(device)
         self.normalize = MeanShift([0.485, 0.456, 0.406], [0.229, 0.224, 0.225], norm=True).cuda()
         for param in self.parameters():
             param.requires_grad = False
@@ -560,3 +562,19 @@ class DepthDistillationLoss(nn.Module):
         }
         # breakpoint()
         return loss, loss_dict
+
+
+class HuberLoss(nn.Module):
+    def __init__(self, delta=1.0):
+        super(HuberLoss, self).__init__()
+        self.delta = delta
+
+    def forward(self, pred, target):
+        error = pred - target
+        abs_error = torch.abs(error)
+        
+        quadratic = 0.5 * error ** 2
+        linear = self.delta * (abs_error - 0.5 * self.delta)
+
+        loss = torch.where(abs_error < self.delta, quadratic, linear)
+        return loss.mean()

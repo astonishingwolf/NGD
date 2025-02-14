@@ -56,10 +56,10 @@ class MonocularDataset4DDress(Dataset):
         self.target_depth = get_targets_npy(cfg.target_depth, cfg.image_size,start_end,cfg.skip_frames)
         self.target_norm_map = get_targets_normal(cfg.target_normal, cfg.image_size,start_end,cfg.skip_frames)
         self.iterator_helper = torch.arange(start_end[0],start_end[1],cfg.skip_frames)
-        self.target_depth = torch.mul(self.target_depth, self.target_complete_shil.squeeze(1))
-        min_vals =  self.target_depth.amin(dim=(1, 2), keepdim=True) 
-        max_vals =  self.target_depth.amax(dim=(1, 2), keepdim=True) 
-        self.target_depth_norm = ( self.target_depth - min_vals) / (max_vals - min_vals + 1e-8)  
+        # self.target_depth = torch.mul(self.target_depth, self.target_complete_shil.squeeze(1))
+        # min_vals =  self.target_depth.amin(dim=(1, 2), keepdim=True) 
+        # max_vals =  self.target_depth.amax(dim=(1, 2), keepdim=True) 
+        # self.target_depth_norm = ( self.target_depth - min_vals) / (max_vals - min_vals + 1e-8)  
         # breakpoint()
         
         # self.target_depth_norm = 1 - self.target_depth_norm
@@ -82,7 +82,7 @@ class MonocularDataset4DDress(Dataset):
         sample['target_complete_shil'] = self.target_complete_shil[idx]
         sample['hands_shil'] = self.target_hands_shil[idx]
         # self.target_depth
-        sample['target_depth'] = self.target_depth_norm[idx]
+        sample['target_depth'] = self.target_depth[idx]
         sample['target_norm_map'] = self.target_norm_map[idx]
         sample['tex_image'] = self.orig_image[idx]
         sample['reduced_pose'] = self.reduced_pose[idx]

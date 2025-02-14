@@ -100,10 +100,17 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
         cam_data = MonocularDataset4DDress(cfg)
     else:
         cam_data = MonocularDataset(cfg)
-
     dataloader = DataLoader(dataset = cam_data, batch_size = cfg.batch_size, shuffle=False)
-    n_verts_cannonical = jacobian_source.vertices_from_jacobians(gt_jacobians.detach()).squeeze()
-    n_verts_cannonical = n_verts_cannonical + torch.mean(sources_vertices.detach(), axis=0, keepdims=True) 
+    
+    if cfg.remeshing:
+        remesh_dir = os.path.join(output_path, 'remeshed_template')
+        os.makedirs(remesh_dir, exist_ok=True)
+        delta =  torch.from_numpy(np.load(os.path.join(remesh_dir, f'delta_transform.npy'))).to(device)  
+        n_verts_cannonical = jacobian_source.vertices_from_jacobians(gt_jacobians.detach()).squeeze()
+        n_verts_cannonical = n_verts_cannonical + torch.mean(sources_vertices.detach(), axis=0, keepdims=True) + delta
+    else:
+        n_verts_cannonical = jacobian_source.vertices_from_jacobians(gt_jacobians.detach()).squeeze()
+        n_verts_cannonical = n_verts_cannonical + torch.mean(sources_vertices.detach(), axis=0, keepdims=True) 
 
     tri_mesh_template = trimesh.Trimesh(vertices=n_verts_cannonical.detach().cpu().numpy(), faces = source_faces.cpu().numpy())
     tri_mesh_template.export(os.path.join(output_path, 'Saved_Meshes',f'output_template.obj'))
@@ -112,7 +119,6 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
     gt_manager_source = GTInitializer()
 
     if texture :
-
         uv_tex_static = torch.load(os.path.join(output_path, 'texture_mlp_static.pt'))
         uvs = torch.load(os.path.join(output_path, 'uvs.pt'))
         indices = torch.load(os.path.join(output_path, 'indices.pt'))
@@ -163,12 +169,14 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
                 n_verts_cannonical_before = garment_skinning_function(n_verts_cannonical.unsqueeze(0).detach(), sample['pose'], sample['betas'], body, garment_skinning)
             
             n_verts_cannonical_before = n_verts_cannonical_before.squeeze(0)
+
             if cfg.model_type == 'Dress4D':
                 vertices_post_skinning_cannonical = garment_skinning_function(n_verts_cannonical.unsqueeze(0), sample['pose'], \
                                                                     sample['betas'], body, garment_skinning, sample['translation'])
             else:
-                vertices_post_skinning_cannonical = garment_skinning_function(n_verts_cannonical.unsqueeze(0), sample['pose'], \
+                vertices_post_skinning_cannonical = garment_skinning_function(sources_vertices.unsqueeze(0), sample['pose'], \
                                                                     sample['betas'],body, garment_skinning)
+
             vertices_post_skinning_cannonical = vertices_post_skinning_cannonical.squeeze(0)
             cannonical_face_normals = calculate_face_normals(vertices_post_skinning_cannonical.detach(), source_faces)
             cannonical_face_centers = calculate_face_centers(vertices_post_skinning_cannonical.detach(), source_faces)  
@@ -204,7 +212,7 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
             _, render_info,_ = gt_manager_source.render(new_vertices, source_faces, renderer_front)
             render_front = gt_manager_source.diffuse_images()
             mask_front = gt_manager_source.shillouette_images()
-            # breakpoint()
+
             front_images.append(render_front)
             save_any_image(render_front, os.path.join(output_path, 'save_img',f'final_front_{idx[0].detach().cpu().numpy()}.png'))
             save_any_image(mask_front, os.path.join(output_path, 'save_img_mask',f'final_front_mask_{idx[0].detach().cpu().numpy()}.png'))
@@ -250,6 +258,7 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
             # back_mv = sample['mv'].clone()
             # back_mv[:,2,2] = -1 * back_mv[:,2,2]
             # breakpoint()
+
             renderer_back = AlphaRenderer(sample['mv_back'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])
             _, render_info,_ = gt_manager_source.render(new_vertices, source_faces, renderer_back)
             render_back = gt_manager_source.diffuse_images()

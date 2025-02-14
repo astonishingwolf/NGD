@@ -44,8 +44,8 @@ timeloop:
 
 
   save_instance : True
-  save_index : 10
-
+  save_index : 0
+  save_freq : 100
   remesh_percentile : 0.8
 
   

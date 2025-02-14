@@ -42,6 +42,7 @@ class SourceMesh:
         return self.__source_global_translation_to_original
 
     def vertices_from_jacobians(self, d, center = None):
+        # breakpoint()
         return self.poisson.solve_poisson(d)
         # return self.splu.solve(d)
     def jacobians_from_vertices(self, v):

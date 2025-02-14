@@ -340,6 +340,7 @@ class PoissonSolver:
 
     def solve_poisson(self,jacobians): 
         # st = time.time()
+        # breakpoint()
         assert(len(jacobians.shape) == 4)
         assert(jacobians.shape[2] == 3 and jacobians.shape[3] == 3)
        

@@ -44,7 +44,7 @@ from scripts.utils.helper import *
 from scripts.models.model_utils import get_expon_lr_func
 from scripts.losses.rendering_loss import ssim
 from scripts.models.model_utils import get_linear_interpolation_func
-
+from scripts.losses.utils import VGGPerceptualLoss
 
 def geometry_training_loop(cfg,device):
 
@@ -54,7 +54,7 @@ def geometry_training_loop(cfg,device):
     cloth_optim.training_init()
     cloth_deform.training_init()
     smooth_term = get_linear_noise_func(lr_init=0.01, lr_final=1e-15, lr_delay_mult=0.01, max_steps=120000)
-
+    
     glctx = dr.RasterizeCudaContext()  
     gt_manager_source = GTInitializer()
         
@@ -66,12 +66,14 @@ def geometry_training_loop(cfg,device):
     dataloader = DataLoader(dataset = cam_data, batch_size = cfg.batch_size, shuffle=True)
     total_frames = cam_data.__len__()
     epochs = cfg.num_epochs
+    remeshing_loss = VGGPerceptualLoss()
     total_loss = Loss(cfg, cloth_optim.cloth_template)
 
     log_dir = os.path.join(output_path,'logs')
     os.makedirs(os.path.join(output_path,'logs'), exist_ok=True)
     writer = SummaryWriter(log_dir)
-    
+    warm_up = get_linear_interpolation_func(0, 1, max_steps = 10)
+
     cannonical_dir = os.path.join(output_path,'cannonical')
     os.makedirs(os.path.join(output_path,'cannonical'), exist_ok=True)
     deform_model_weights_dir = os.path.join(output_path,'model_weights')
@@ -86,7 +88,9 @@ def geometry_training_loop(cfg,device):
     os.makedirs(save_image_dir, exist_ok=True)
     save_image_dir = os.path.join(output_path,'Maps')
     os.makedirs(save_image_dir, exist_ok=True)
-
+    save_mesh_dir_fr = os.path.join(output_path,'mesh_epochs')
+    os.makedirs(save_mesh_dir_fr, exist_ok=True)
+    jacobian_dict = {}
     if cfg.save_instance:
         save_image_dir_fr = os.path.join(output_path,f'save_img_epoch_{cfg.save_index}')
         os.makedirs(save_image_dir_fr, exist_ok=True)
@@ -102,29 +106,28 @@ def geometry_training_loop(cfg,device):
 
             cloth_deform.optimizer.zero_grad()
             
-            ast_noise = torch.randn(1, 1, device='cuda').expand(cloth_optim.template_face_centers.shape[0], -1) * cam_data.__len__() * smooth_term((e+1) * cam_data.__len__() + it)            
+            ast_noise = 0.1 * torch.randn(4, device='cuda').unsqueeze(0).expand(cloth_optim.template_face_centers.shape[0], -1) * cam_data.__len__() * smooth_term((e+1) * cam_data.__len__() + it)            
             time = torch.zeros_like(sample['time']).to(device)
-            # time = torchsample['time']
+
             pose = sample['reduced_pose']
             if cfg.model_type == 'Dress4D':
                 time_extended = time[None, ...].repeat(cloth_optim.template_face_centers.shape[0], 1)
-            elif cfg.pose_noise:
-                time_extended = time[None, ...].repeat(cloth_optim.template_face_centers.shape[0], 1) + ast_noise
             else:
                 time_extended = time[None, ...].repeat(cloth_optim.template_face_centers.shape[0], 1)
+
             if cfg.model_type == 'Dress4D':
-                pose_extended = pose.repeat(cloth_optim.template_face_centers.shape[0], 1)
+                # breakpoint()
+                pose_extended = pose.repeat(cloth_optim.template_face_centers.shape[0], 1) 
+                # breakpoint()
             elif cfg.pose_noise:
                 pose_extended = pose.repeat(cloth_optim.template_face_centers.shape[0], 1) + ast_noise
             else:
                 pose_extended = pose.repeat(cloth_optim.template_face_centers.shape[0], 1)
-
-            if e >= cfg.warm_ups:
-                cannonical_verts, cannonical_faces = cloth_optim.get_mesh_attr_from_jacobians(cloth_optim.cannonical_jacobians.detach())
                 
+            if e >= cfg.warm_ups:
+                
+                cannonical_verts, cannonical_faces = cloth_optim.get_mesh_attr_from_jacobians(cloth_optim.cannonical_jacobians.detach(), with_align = True) 
                 if cfg.model_type == 'Dress4D':
-                    # skinned_pose = sample['pose'].clone()
-                    # skinned_pose[...,:3] = skinned_pose[...,:3] * 0.0
                     vertices_post_skinning_cannonical = garment_skinning_function(cannonical_verts.unsqueeze(0), sample['pose'], \
                                                                         sample['betas'], cloth_optim.body, cloth_optim.template_garment_skinning, sample['translation'])
                 else:
@@ -133,7 +136,7 @@ def geometry_training_loop(cfg,device):
                     vertices_post_skinning_cannonical = garment_skinning_function(cannonical_verts.unsqueeze(0), skinned_pose, \
                                                                         sample['betas'], cloth_optim.body, cloth_optim.template_garment_skinning)
 
-                vertices_post_skinning_cannonical = vertices_post_skinning_cannonical.squeeze(0)
+                vertices_post_skinning_cannonical = vertices_post_skinning_cannonical.squeeze(0) 
                 cannonical_face_normals = calculate_face_normals(vertices_post_skinning_cannonical.detach(), cannonical_faces)
                 cannonical_face_centers = calculate_face_centers(vertices_post_skinning_cannonical.detach(), cannonical_faces)
                 
@@ -146,12 +149,33 @@ def geometry_training_loop(cfg,device):
                     time_extended = time_extended,
                     pose_extended = pose_extended
                 )
+
                 residual_jacobians = cloth_deform.forward(input)
                 residual_jacobians = residual_jacobians.view(residual_jacobians.shape[0],3,3)
+
+                if e >= cfg.warm_ups_remesh and e % cfg.remesh_freq == 0 and cfg.remeshing and e < cfg.remesh_stop:
+                    index = sample['idx'][0].to(torch.int32).cpu().numpy()
+                    jacobian_dict[F'{index}'] = residual_jacobians.detach()  
+                    save_mesh(cannonical_verts,cannonical_faces, os.path.join(remesh_dir, f'remeshed_{e}.obj'))
+
+                if e > cfg.warm_ups_remesh and ((e - 1) % cfg.remesh_freq - 10) < 0 and cfg.remeshing and e < cfg.remesh_stop:
+                    index = sample['idx'][0].to(torch.int32).cpu().numpy()
+                    residual_jacobians_interpolated = jacobian_interpolation(jacobian_dict[F'{index}'].unsqueeze(0).detach(), cloth_optim.template_vertices_remeshed,\
+                                            cloth_optim.template_vertices_remeshed_prev, cloth_optim.template_faces_remeshed, cloth_optim.template_faces_remeshed_prev)
+                    it = (e - cfg.warm_ups_remesh) % cfg.remesh_freq
+                    alpha = warm_up(((e - cfg.warm_ups_remesh) % cfg.remesh_freq))
+                    # breakpoint()
+                    save_mesh(cannonical_verts,cannonical_faces, os.path.join(remesh_dir, f'remeshed_can_{e}.obj'))
+                    residual_jacobians_blend = alpha * residual_jacobians + (1-alpha) * residual_jacobians_interpolated.detach()
+                    combined_jacobians = cloth_optim.cannonical_jacobians + residual_jacobians_blend
+                    # combined_jacobians = cloth_optim.cannonical_jacobians + residual_jacobians
+                else:
+                    combined_jacobians = cloth_optim.cannonical_jacobians + residual_jacobians
+
             else : 
                 residual_jacobians  = torch.zeros_like(cloth_optim.cannonical_jacobians)
+                combined_jacobians = cloth_optim.cannonical_jacobians + residual_jacobians
 
-            combined_jacobians = cloth_optim.cannonical_jacobians + residual_jacobians
             vertices_pre_skinning,_ = cloth_optim.get_mesh_attr_from_jacobians(combined_jacobians)
 
             if cfg.model_type == 'Dress4D':
@@ -184,12 +208,18 @@ def geometry_training_loop(cfg,device):
             train_target_normal = (sample['target_norm_map'].to('cuda') + 1)/2
             
             if cfg.save_instance and sample['idx'][0] == cfg.save_index:
-
-                save_image(train_render.permute(0,3,1,2), os.path.join(save_image_dir_fr, f'output_{e}.png'))
-                # renderer_back = AlphaRenderer(sample['mv_back'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])
-                # _, render_info, rast_out = gt_manager_source.render(vertices_post_skinning, cloth_optim.cannonical_faces, renderer_back)
-                # render_back = gt_manager_source.diffuse_images()
-                # save_any_image(render_back, os.path.join(save_image_dir_fr, f'output_{e}.png'))
+                # breakpoint()
+                # save_image(train_render.permute(0,3,1,2), os.path.join(save_image_dir_fr, f'output_{e}.png'))
+                if e % cfg.save_freq == 0:
+                    save_mesh(vertices_post_skinning,cloth_optim.cannonical_faces, os.path.join(save_mesh_dir_fr, f'output_{e}.obj'))
+                
+                renderer_back = AlphaRenderer(sample['mv_back'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])
+                _, render_info, rast_out = gt_manager_source.render(vertices_post_skinning, cloth_optim.cannonical_faces, renderer_back)
+                render_back = gt_manager_source.diffuse_images()
+                save_any_image(render_back, os.path.join(save_image_dir_fr, f'output_{e}.png'))
+            
+            if e % cfg.remesh_freq == 15 and e >= cfg.warm_ups_remesh and cfg.remeshing and e < cfg.remesh_stop:
+                    save_mesh(vertices_post_skinning,cloth_optim.cannonical_faces, os.path.join(save_mesh_dir_fr, f'output_{e}.obj'))
 
             pred = SimpleNamespace(
                 pred_verts=vertices_post_skinning,
@@ -216,14 +246,37 @@ def geometry_training_loop(cfg,device):
             loss, loss_dict =  total_loss.forward(pred,target)  
             loss.backward()
 
+            # if e >= cfg.warm_ups_remesh and e % cfg.remesh_freq == 0 and cfg.remeshing:
+            # # if e >= cfg.warm_ups_remesh - 5:
+            #     loss.backward(retain_graph=True)
+
+            #     cloth_optim.step(e, it, total_frames)
+            #     cloth_deform.step(e, it, total_frames)
+
+            #     # cloth_deform.optimizer.zero_grad()
+            #     # cloth_optim.jacobian_optimizer_cannonical.zero_grad()
+            #     train_render.grad = None  
+            # else:
+            #     loss.backward()
+            #     cloth_optim.step(e, it, total_frames)
+            #     cloth_deform.step(e, it, total_frames)
+                
             if cfg.gradient_clipping :
                 torch.nn.utils.clip_grad_norm_([cloth_optim.cannonical_jacobians], max_norm=1.0)
 
             if e >= cfg.warm_ups_remesh and e % cfg.remesh_freq == 0 and cfg.remeshing:
-                cloth_optim.save_img_grad(train_render.grad, train_shil, rast_out)
+                cloth_optim.save_img_grad(train_render.grad, train_target_render_shil, rast_out)
 
             cloth_optim.step(e, it, total_frames)
             cloth_deform.step(e, it, total_frames)
+            
+            # if e >= cfg.warm_ups_remesh and e % cfg.remesh_freq == 0 and cfg.remeshing:
+            #     train_render_segmented = torch.mul(train_render.permute(0,3,1,2),train_target_render_shil.detach())
+            #     # loss_remeshing = F.l1_loss(train_render_segmented, train_target_render) 
+            #     loss_remeshing = remeshing_loss(train_render_segmented, train_target_render)
+            #     loss_remeshing.backward()
+            #     cloth_optim.save_img_grad(train_render.grad, train_target_render_shil, rast_out)
+            #     train_render.grad = None
 
             if cfg.logging:
                 global_step = e * len(dataloader) + it
@@ -242,8 +295,9 @@ def geometry_training_loop(cfg,device):
             loss_each_epoch += loss.item()
             loss_rendering += loss_dict['loss_render'].item()
             loss_regularization += loss_dict['loss_regularization'].item()
-            # loss_depth += loss_dict['loss_depth'].item()
-            loss_depth = 0.0
+            loss_depth += loss_dict['loss_depth'].item()
+            
+            # loss_depth = 0.0
             # loss_rendering += 0
             # loss_regularization += 0
 

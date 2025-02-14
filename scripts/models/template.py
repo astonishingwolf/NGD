@@ -33,7 +33,6 @@ from scripts.utils.general_utils import *
 from scripts.utils.smpl_utils import *
 from scripts.utils.cloth import Cloth
 from scripts.models.remesh.remesh import loop_subdivision, triangle_subdivision,remesh
-# from scripts.models.remesh.remesh_legacy import *
 from scripts.models.model_utils import get_linear_interpolation_func,get_expon_lr_func, interpolate_vertices
 from scripts.utils.helper import *
 
@@ -85,9 +84,10 @@ class ClothModel:
             self.templpate_smpl_shape = torch.tensor(body_data['shape']).to(self.device)
             self.body.update_shape(shape = self.templpate_smpl_shape)
             self.body.skinning_weights = torch.tensor(body_data['blendweights']).to(self.device)
-        # breakpoint()
+
         # self.smpl_vertices, self.smpl_betas = get_smpl_params(cfg.smpl_bcnet_pkl)
         # self.body = self.body.update_skinning_weight(betas=self.smpl_betas)
+
         self.spatial_lr_scale = 5
 
         if cfg.skinning_func == 'rbf':
@@ -150,6 +150,7 @@ class ClothModel:
             faces = self.template_faces_orig.detach().cpu().numpy())
         tri_mesh.export(os.path.join(self.output_path, f'source_mesh.obj'))
         self.delta = torch.zeros(3, device = self.device)
+        self.delta_transform = torch.zeros(3, device = self.device)
         self.remesh_step = 0
         self.max_verts = cfg.max_verts
         self.min_edge_len = get_linear_interpolation_func(cfg.start_edge_len, cfg.end_edge_len)
@@ -179,9 +180,7 @@ class ClothModel:
             # self.jacobian_scheduler_gt = torch.optim.lr_scheduler.LambdaLR(jacobian_optimizer,lr_lambda=lambda x: max(0.01, 10**(-x*0.05)))
               
     def step(self, epochs, iterations, total_frames):
-        
-        # if epochs == 3:
-        #     breakpoint()
+
         if self.custom_training:
             self.jacobian_optimizer_cannonical.step()
             self.update_learning_rate((epochs+1)*total_frames + iterations)
@@ -193,18 +192,21 @@ class ClothModel:
             else :
                 self.jacobian_optimizer_cannonical.step()
 
-    def get_mesh_attr_from_jacobians(self, jacobians, detach = False):
+    def get_mesh_attr_from_jacobians(self, jacobians, detach = False, with_align = True):
 
         # self.cannonical_verts = self.jacobians_remeshed.vertices_from_jacobians(jacobians).squeeze()
         # self.cannonical_verts = self.cannonical_verts + torch.mean(self.template_vertices_orig.detach(), axis=0).repeat(self.cannonical_verts.shape[0],1)
         # self.cannonical_faces = self.template_faces_remeshed
         # return self.cannonical_verts, self.cannonical_faces
-        
         cannonical_verts = self.jacobians_remeshed.vertices_from_jacobians(jacobians).squeeze()
-        # breakpoint()
         # cannonical_verts = cannonical_verts + (torch.mean(self.template_vertices_orig.detach(), axis=0) + self.delta).repeat(cannonical_verts.shape[0],1)
-        cannonical_verts = cannonical_verts + (torch.mean(self.template_vertices_remeshed, axis=0)).repeat(cannonical_verts.shape[0],1)
-        cannonical_faces = self.template_faces_remeshed
+        if with_align:
+            cannonical_verts = cannonical_verts + (torch.mean(self.template_vertices_remeshed, axis=0)).repeat(cannonical_verts.shape[0],1) - self.delta_transform
+            # cannonical_verts = cannonical_verts + (torch.mean(self.template_vertices_remeshed, axis=0)).repeat(cannonical_verts.shape[0],1)
+            cannonical_faces = self.template_faces_remeshed
+        else:
+            cannonical_verts = cannonical_verts 
+            cannonical_faces = self.template_faces_remeshed
 
         return cannonical_verts, cannonical_faces
 
@@ -251,6 +253,8 @@ class ClothModel:
         
         self.template_garment_skinning = garment_skinning_interpolation(self.template_vertices_remeshed_tmp,\
                                                                         self.template_garment_skinning, self.template_vertices_remeshed)
+        
+        # self.template_garment_skinning = compute_rbf_skinning_weight(self.template_vertices_remeshed_tmp, self.body)
         self.template_face_normals = calculate_face_normals(self.template_vertices_remeshed_tmp, \
                                                             self.template_faces_remeshed_tmp)
         self.template_face_centers = calculate_face_centers(self.template_vertices_remeshed_tmp, \
@@ -372,6 +376,8 @@ class ClothModel:
         self.remesh_dir = os.path.join(self.output_path, 'remeshed_template')
         os.makedirs(self.remesh_dir, exist_ok=True)
 
+        old_cannonical,_ = self.get_mesh_attr_from_jacobians(self.cannonical_jacobians.detach())
+
         self.template_vertices_remeshed_tmp, self.template_faces_remeshed_tmp, face_mask = remesh(self.template_vertices_remeshed, self.template_faces_remeshed, face_mask, \
             flip = True, max_vertices = self.max_verts, threshold= min_edge_length)
         self.template_vertices_remeshed_tmp, self.template_faces_remeshed_tmp = \
@@ -406,11 +412,20 @@ class ClothModel:
             cloth_template = self.template_cloth
         )
 
+        self.delta_transform = self.delta_calculate(self.template_vertices_remeshed_tmp, self.template_faces_remeshed_tmp,\
+                                                    new_jacobians.detach(), old_cannonical, self.template_faces_remeshed, self.cannonical_jacobians.detach())
+
+        np.save(os.path.join(self.remesh_dir, f'delta_transform.npy'), self.delta_transform.cpu().numpy())
         self.add_new_elements_optimizer(new_jacobians, face_mask, self.template_vertices_remeshed_tmp,self.template_vertices_remeshed, self.template_faces_remeshed_tmp, self.template_faces_remeshed)
+        self.template_vertices_remeshed_prev = self.template_vertices_remeshed
+        self.template_faces_remeshed_prev = self.template_faces_remeshed
         self.template_vertices_remeshed = self.template_vertices_remeshed_tmp
         self.template_faces_remeshed = self.template_faces_remeshed_tmp
+
         self.cannonical_faces = self.template_faces_remeshed
         
+
+
         self.face_gradients_acc = torch.zeros((self.template_faces_remeshed.shape[0], 1), device = self.device)
         self.face_gradients_count = torch.zeros((self.template_faces_remeshed.shape[0], 1), device = self.device) 
         self.remesh_step += 1
@@ -427,18 +442,20 @@ class ClothModel:
 
         ## Check whether this normalisation works. Make them positive
         img_grads_norm = img_grads.norm(p = 2 , dim = -1, keepdim = False)
-        # img_shil = img_shil.mean(dim = -1)
-        # img_grads_norm = torch.mul(img_grads_norm,img_shil.squeeze(-1))
+        # breakpoint()
+        # img_shil = img_shil.mean(dim = im-1)
+        img_grads_norm = torch.mul(img_grads_norm,img_shil.squeeze(0).mean(dim = 0, keepdim = True))
         min_val = img_grads_norm.min()
         max_val = img_grads_norm.max()
-        
+        # breakpoint()
         normalized_img_tensor = (img_grads_norm - min_val) / (max_val - min_val)
         # breakpoint()
         # save_gradient_image(normalized)
-        visible_faces = torch.unique(rast_out[...,3]) - 1
+        rast_face = torch.mul(rast_out.permute(0, 3, 1, 2), img_shil.mean(dim = 1).unsqueeze(0))
+        visible_faces = torch.unique(rast_face[:,3,:, :]) - 1
         visible_faces = visible_faces[visible_faces >= 0].to(torch.long)
-        chunk_size = 500 
-        
+        chunk_size = 25 
+        # breakpoint()
         for chunk_start in range(0, len(visible_faces), chunk_size):
             chunk_end = min(chunk_start + chunk_size, len(visible_faces))
             unique_chunk = visible_faces[chunk_start:chunk_end]
@@ -457,5 +474,11 @@ class ClothModel:
         # self.face_gradients_acc[visible_faces] += average_grad.unsqueeze(-1)
         # self.face_gradients_count[visible_faces] += 1
 
-    
-
+    def delta_calculate(self, vertices, faces, new_jacobians, old_vertices_cannonical, old_faces, old_jacobians):
+        
+        # breakpoint()
+        new_cannonical,_ = self.get_mesh_attr_from_jacobians(new_jacobians.detach())
+        # breakpoint()
+        # old_cannonical = self.get_mesh_attr_from_jacobians(old_vertices, old_faces, old_jacobians)
+        return new_cannonical.mean(0) - old_vertices_cannonical.mean(0) 
+        #  self.delta_transform

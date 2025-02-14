@@ -48,8 +48,8 @@ class Regularization(nn.Module):
         U, S, Vh = torch.linalg.svd(predictions.iter_jacobians.clone().detach())
         rotation_transpose = torch.matmul(U, Vh)
         nearest_rotation = torch.transpose(rotation_transpose, -2, -1)
-        iter_loss = (((predictions.iter_jacobians) - nearest_rotation) ** 2).mean()
-        # iter_loss = (((predictions.iter_jacobians) - torch.eye(3, 3, device = self.device)) ** 2).mean()
+        # iter_loss = (((predictions.iter_jacobians) - nearest_rotation) ** 2).mean()
+        iter_loss = (((predictions.iter_jacobians) - torch.eye(3, 3, device = self.device)) ** 2).mean()
         # residual_loss = (((predictions.residual_jacobians) - torch.zeros(3, 3, device = self.device)) ** 2).mean()
         # r_loss = iter_loss + residual_loss
         ## End here
@@ -61,7 +61,8 @@ class Regularization(nn.Module):
         r_loss = iter_loss 
         ## Enf here
         
-        loss = (loss_normal + loss_laplacian)*self.weight + r_loss * 0.3
+        loss = (loss_edge)*self.weight + r_loss * 0.25
+        # breakpoint()
         # breakpoint()
         loss_dict = {
             'loss_regularization' : loss,

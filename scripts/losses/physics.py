@@ -92,14 +92,11 @@ class BendingLoss:
         self.template.f_connectivity =  self.template.f_connectivity.to(torch.int64)
         n0 = torch.index_select(fn, 1, self.template.f_connectivity[:, 0])
         n1 = torch.index_select(fn, 1, self.template.f_connectivity[:, 1])
-
-        # 
-        # Compute edge length
         v0 = torch.index_select(v_template, 1, self.template.f_connectivity_edges[:, 0])
         v1 = torch.index_select(v_template, 1, self.template.f_connectivity_edges[:, 1])
+        
         e = v1 - v0
         e_norm = torch.nn.functional.normalize(e, dim=-1)
-
         cos = torch.sum(n0 * n1, dim=-1)
         sin = torch.sum(e_norm * torch.cross(n0, n1, dim=-1), dim=-1)
         self.theta_template = torch.atan2(sin, cos)
