@@ -364,7 +364,7 @@ class ClothModel:
 
         min_val = grads.min()
         max_val = grads.max()
-
+        # breakpoint()
         max_percentile = self.remesh_percentile(self.remesh_step)
         min_edge_length = self.min_edge_len(self.remesh_step)
         grads = (grads - min_val) / (max_val - min_val)
@@ -476,9 +476,7 @@ class ClothModel:
 
     def delta_calculate(self, vertices, faces, new_jacobians, old_vertices_cannonical, old_faces, old_jacobians):
         
-        # breakpoint()
         new_cannonical,_ = self.get_mesh_attr_from_jacobians(new_jacobians.detach())
-        # breakpoint()
         # old_cannonical = self.get_mesh_attr_from_jacobians(old_vertices, old_faces, old_jacobians)
         return new_cannonical.mean(0) - old_vertices_cannonical.mean(0) 
         #  self.delta_transform

@@ -17,7 +17,7 @@ timeloop:
   hidden_layers : 3
   pose_noise : False
   noise_level : 0.002
-  vertex_noise : True
+  vertex_noise : False
   skinning_func : rbf  
   stop_train_after_warmup : True
   use_grad_clipping : False

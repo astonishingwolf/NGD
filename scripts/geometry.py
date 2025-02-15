@@ -166,14 +166,15 @@ def geometry_training_loop(cfg,device):
                                             cloth_optim.template_vertices_remeshed_prev, cloth_optim.template_faces_remeshed, cloth_optim.template_faces_remeshed_prev)
                     it = (e - cfg.warm_ups_remesh) % cfg.remesh_freq
                     alpha = warm_up(((e - cfg.warm_ups_remesh) % cfg.remesh_freq))
-                    # breakpoint()
                     save_mesh(cannonical_verts,cannonical_faces, os.path.join(remesh_dir, f'remeshed_can_{e}.obj'))
                     residual_jacobians_blend = alpha * residual_jacobians + (1-alpha) * residual_jacobians_interpolated.detach()
                     combined_jacobians = cloth_optim.cannonical_jacobians + residual_jacobians_blend
-                    # combined_jacobians = cloth_optim.cannonical_jacobians + residual_jacobians
                 else:
                     combined_jacobians = cloth_optim.cannonical_jacobians + residual_jacobians
-
+                
+                if e % 100 == 0:
+                    save_mesh(cannonical_verts,cannonical_faces, os.path.join(remesh_dir, f'remeshed_can_{e}.obj'))
+            
             else : 
                 residual_jacobians  = torch.zeros_like(cloth_optim.cannonical_jacobians)
                 combined_jacobians = cloth_optim.cannonical_jacobians + residual_jacobians
@@ -210,9 +211,11 @@ def geometry_training_loop(cfg,device):
             train_target_normal = (sample['target_norm_map'].to('cuda') + 1)/2
             
             if cfg.save_instance and sample['idx'][0] == cfg.save_index:
+                
                 # breakpoint()
                 # save_image(train_render.permute(0,3,1,2), os.path.join(save_image_dir_fr, f'output_{e}.png'))
-                if e % cfg.save_freq == 0:
+                
+                if e % cfg.save_freq == 0 or e % cfg.remesh_freq == 1 or e % cfg.remesh_freq == 5 or e % cfg.remesh_freq == 10:
                     save_mesh(vertices_post_skinning,cloth_optim.cannonical_faces, os.path.join(save_mesh_dir_fr, f'output_{e}.obj'))
                 
                 renderer_back = AlphaRenderer(sample['mv_back'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])
@@ -220,8 +223,8 @@ def geometry_training_loop(cfg,device):
                 render_back = gt_manager_source.diffuse_images()
                 save_any_image(render_back, os.path.join(save_image_dir_fr, f'output_{e}.png'))
             
-            if e % cfg.remesh_freq == 15 and e >= cfg.warm_ups_remesh and cfg.remeshing and e < cfg.remesh_stop:
-                    save_mesh(vertices_post_skinning,cloth_optim.cannonical_faces, os.path.join(save_mesh_dir_fr, f'output_{e}.obj'))
+            # if e % cfg.remesh_freq == 15 and e >= cfg.warm_ups_remesh and cfg.remeshing and e < cfg.remesh_stop:
+            #         save_mesh(vertices_post_skinning,cloth_optim.cannonical_faces, os.path.join(save_mesh_dir_fr, f'output_{e}.obj'))
 
             pred = SimpleNamespace(
                 pred_verts=vertices_post_skinning,
@@ -268,7 +271,7 @@ def geometry_training_loop(cfg,device):
             if cfg.gradient_clipping :
                 torch.nn.utils.clip_grad_norm_([cloth_optim.cannonical_jacobians], max_norm=1.0)
 
-            if e >= cfg.warm_ups_remesh and e % cfg.remesh_freq == 0 and cfg.remeshing:
+            if e >= cfg.warm_ups_remesh and e % cfg.remesh_freq == 0 and cfg.remeshing and e <= cfg.remesh_stop:
                 cloth_optim.save_img_grad(train_render.grad, train_target_render_shil, rast_out)
 
             cloth_optim.step(e, it, total_frames)

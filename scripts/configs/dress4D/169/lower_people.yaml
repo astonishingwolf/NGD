@@ -17,7 +17,7 @@ timeloop:
   hidden_layers : 3
   pose_noise : False
   noise_level : 0.002
-  vertex_noise : True
+  vertex_noise : False
   skinning_func : rbf  
   stop_train_after_warmup : True
   use_grad_clipping : False
@@ -40,10 +40,11 @@ timeloop:
 
   # Save Paths
   output_path: /hdd_data/nakul/soham/New_Results/Dress4D/169/Remeshed/lower
-  Exp_name : Final
+  Exp_name : Remesh
 
   save_instance : True
-  save_index : 10
+  save_index : 0
+  save_freq : 100
 
   remesh_percentile : 0.8
 
