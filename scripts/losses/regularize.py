@@ -34,11 +34,16 @@ class Regularization(nn.Module):
         expanded_masks = ~predictions.face_masks.unsqueeze(-1).expand(-1, -1, 3)
         zeros = torch.zeros(3, 3, device = self.device)
         expanded_zeros = zeros.expand(predictions.residual_jacobians.shape)
-        predictions.iter_jacobians = torch.where(
-            expanded_masks,
-            expanded_identity,
-            predictions.iter_jacobians
-        )
+        
+        if predictions.epoch >= predictions.warm_ups:   
+            predictions.iter_jacobians = torch.where(
+                expanded_masks,
+                expanded_identity,
+                predictions.iter_jacobians
+            )
+        else :
+            pass
+        
         expanded_masks_residual = predictions.face_masks.unsqueeze(-1).expand(-1, -1, 3)
         predictions.residual_jacobians = torch.where(
             expanded_masks_residual,

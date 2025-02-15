@@ -147,7 +147,9 @@ def geometry_training_loop(cfg,device):
                     face_normals = cannonical_face_normals,
                     time = time,
                     time_extended = time_extended,
-                    pose_extended = pose_extended
+                    pose_extended = pose_extended,
+                    epoch = e,
+                    warm_ups = cfg.warm_ups,
                 )
 
                 residual_jacobians = cloth_deform.forward(input)
@@ -231,7 +233,9 @@ def geometry_training_loop(cfg,device):
                 train_shil = train_shil,
                 train_norm = train_norm,
                 train_depth = train_depth,
-                face_masks= face_mask
+                face_masks= face_mask,
+                epoch = e,
+                warm_ups = cfg.warm_ups,
             )
 
             target = SimpleNamespace(

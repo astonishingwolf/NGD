@@ -63,13 +63,19 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
             body_data = pickle.load(f, encoding='latin1')
         templpate_smpl_shape = torch.tensor(body_data['shape']).to(device)
         body.update_shape(shape = templpate_smpl_shape)
-    jacobian_source = SourceMesh.SourceMesh(0, os.path.join(remesh_dir, f'source_mesh.obj'), {}, 1, ttype=torch.float)
-    # jacobian_source = SourceMesh.SourceMesh(0, cfg.mesh, {}, 1, ttype=torch.float)
+    if cfg.remeshing:
+        jacobian_source = SourceMesh.SourceMesh(0, os.path.join(remesh_dir, f'source_mesh.obj'), {}, 1, ttype=torch.float)
+    else:
+        jacobian_source = SourceMesh.SourceMesh(0, cfg.mesh, {}, 1, ttype=torch.float)
 
     jacobian_source.load()
     jacobian_source.to(device)
-    sources_vertices,source_faces = load_mesh_path(os.path.join(remesh_dir, f'source_mesh.obj'), scale = -2, device = 'cuda')
-    # sources_vertices,source_faces = load_mesh_path(cfg.mesh, scale = -2, device = 'cuda')
+    
+    if cfg.remeshing:
+        sources_vertices,source_faces = load_mesh_path(os.path.join(remesh_dir, f'source_mesh.obj'), scale = -2, device = 'cuda')
+    else:
+        sources_vertices,source_faces = load_mesh_path(cfg.mesh, scale = -2, device = 'cuda')
+    
     tri_mesh_source = trimesh.Trimesh(vertices=sources_vertices.detach().cpu().numpy(), faces=source_faces.clone().cpu().numpy())
     tri_mesh_source.export(os.path.join(output_path,f'mesh_source.obj')) 
     source_faces = source_faces.to(torch.int64)
@@ -107,7 +113,7 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
         os.makedirs(remesh_dir, exist_ok=True)
         delta =  torch.from_numpy(np.load(os.path.join(remesh_dir, f'delta_transform.npy'))).to(device)  
         n_verts_cannonical = jacobian_source.vertices_from_jacobians(gt_jacobians.detach()).squeeze()
-        n_verts_cannonical = n_verts_cannonical + torch.mean(sources_vertices.detach(), axis=0, keepdims=True) + delta
+        n_verts_cannonical = n_verts_cannonical + torch.mean(sources_vertices.detach(), axis=0, keepdims=True) - delta
     else:
         n_verts_cannonical = jacobian_source.vertices_from_jacobians(gt_jacobians.detach()).squeeze()
         n_verts_cannonical = n_verts_cannonical + torch.mean(sources_vertices.detach(), axis=0, keepdims=True) 
@@ -174,7 +180,7 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
                 vertices_post_skinning_cannonical = garment_skinning_function(n_verts_cannonical.unsqueeze(0), sample['pose'], \
                                                                     sample['betas'], body, garment_skinning, sample['translation'])
             else:
-                vertices_post_skinning_cannonical = garment_skinning_function(sources_vertices.unsqueeze(0), sample['pose'], \
+                vertices_post_skinning_cannonical = garment_skinning_function(n_verts_cannonical.unsqueeze(0), sample['pose'], \
                                                                     sample['betas'],body, garment_skinning)
 
             vertices_post_skinning_cannonical = vertices_post_skinning_cannonical.squeeze(0)
@@ -198,7 +204,10 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
             iter_jacobians = gt_jacobians + residual_jacobians
 
             n_vert = jacobian_source.vertices_from_jacobians(iter_jacobians).squeeze()
-            n_vert = n_vert + torch.mean(sources_vertices.detach(), axis=0, keepdims=True) 
+            if cfg.remeshing:
+                n_vert = n_vert + torch.mean(sources_vertices.detach(), axis=0, keepdims=True)  - delta
+            else :
+                n_vert = n_vert + torch.mean(sources_vertices.detach(), axis=0, keepdims=True)
 
             if idx[0] == 98.0:
                 tri_mesh_cnannonical = trimesh.Trimesh(vertices=n_vert.detach().cpu().numpy(), faces = source_faces.cpu().numpy())

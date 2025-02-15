@@ -47,7 +47,7 @@ class RenderingLoss(nn.Module):
         self.lambda_dssim = 0.35
         self.shil_loss = 0.4
         self.soft_shil =  False
-        
+        self.rendering_loss = HuberLoss(0.005)
     def forward(self, predictions, targets):
         
         train_render = predictions.train_render.permute(0,3,1,2)
@@ -70,7 +70,8 @@ class RenderingLoss(nn.Module):
         shil_loss = F.mse_loss(train_shil_withouthand, targets.train_target_render_shil)
         # shil_loss = F.l1_loss(train_shil_withouthand, targets.train_target_render_shil)
         # shil_loss = F.mse_loss(with_cloth, targets.train_target_complete)
-        l1_rendering_loss = l1_avg(train_render, targets.train_target_render)
+        # l1_rendering_loss = l1_avg(train_render, targets.train_target_render)
+        l1_rendering_loss = self.rendering_loss(train_render, targets.train_target_render)
         rendering_loss =  (1.0 - self.lambda_dssim) * l1_rendering_loss + self.lambda_dssim * (1.0 - ssim(train_render, targets.train_target_render)) + shil_loss * self.shil_loss
         loss_shad = rendering_loss* self.weight
         
