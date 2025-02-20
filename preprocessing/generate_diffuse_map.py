@@ -18,7 +18,7 @@ def generate_diffuse_map(shil_path, normal_path, save_dir : str = None):
     diffuse = np.clip(diffuse, a_min=0.0, a_max=1.0)
     diffuse = diffuse[:,:,np.newaxis]   
     diffuse = diffuse[..., [0,0,0]]
-    shil_cloth = (shil_map == 22).astype(np.uint8)
+    shil_cloth = (shil_map > 0).astype(np.uint8)
     shil_cloth = shil_cloth[..., np.newaxis]
     diffuse = diffuse*shil_cloth
     diffuse = diffuse * 255.0
@@ -46,19 +46,19 @@ def generate_shil_maps(shil_path, save_dir : str = None):
     image.save(os.path.join(save_dir,f'{frame_id}.png'))
     
 def main():
-    normal_path = '/hdd_data/nakul/soham/people_snapshot/people_snapshot_public/male-1-sport/images_norm/sapiens_0.6b'
-    shil_path = '/hdd_data/nakul/soham/people_snapshot/people_snapshot_public/male-1-sport/images_seg/sapiens_0.6b'
-    save_dir = '/hdd_data/nakul/soham/people_snapshot/people_snapshot_public/male-1-sport/images_diffuse'
-    save_dir_shils = '/hdd_data/nakul/soham/people_snapshot/people_snapshot_public/male-1-sport/images_shils'
+    normal_path = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/187/Take1/human/sapien_norm'
+    shil_path = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/187/Take1/human/sapien_seg'
+    save_dir = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/187/Take1/human/diffuse'
+    # save_dir_shils = '/hdd_data/nakul/soham/people_snapshot/people_snapshot_public/male-1-sport/images_shils'
     
     seg_files = natsorted(glob.glob(os.path.join(shil_path, '*_seg.npy')))
     normal_files = natsorted(glob.glob(os.path.join(normal_path, '*.npy')))
-    # for i,normal_file in enumerate(normal_files):
-    #     print(i)
-    #     generate_diffuse_map(seg_files[i], normal_file, save_dir)
+    for i,normal_file in enumerate(normal_files):
+        # print(i)
+        generate_diffuse_map(seg_files[i], normal_file, save_dir)
     
-    for i,shil_file in enumerate(seg_files):
-        generate_shil_maps(shil_file, save_dir_shils)
+    # for i,shil_file in enumerate(seg_files):
+    #     generate_shil_maps(shil_file, save_dir_shils)
 
 if __name__=='__main__':
     main()

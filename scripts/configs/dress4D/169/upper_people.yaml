@@ -39,8 +39,8 @@ timeloop:
 
 
   # Save Paths
-  output_path: /hdd_data/nakul/soham/Results/Dress4D/169/Remeshed/upper
-  Exp_name : Remesh
+  output_path: /hdd_data/nakul/soham/New_Results/Dress4D/169/Non_Regularize/upper
+  Exp_name : Final
 
 
   save_instance : True

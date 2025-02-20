@@ -39,12 +39,15 @@ timeloop:
 
 
   # Save Paths
-  output_path: /hdd_data/nakul/soham/New_Results/Dress4D/185/Remeshed/upper
+  output_path: /hdd_data/nakul/soham/New_Results/Dress4D/185/Non_Regularize/upper
   Exp_name : Final
 
 
   save_instance : True
   save_index : 10
+  # save_index : 0
+  save_freq : 100
+  # remesh_percentile : 0.8
 
   remesh_percentile : 0.8
 
@@ -78,7 +81,7 @@ timeloop:
     Regularization: 0.0
     StVKLoss: 1.0
     BendingLoss: 1.0 
-    # DepthDistillation : 1.0
+    DepthDistillation : 1.0
   
 
   #Logging

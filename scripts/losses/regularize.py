@@ -63,7 +63,7 @@ class Regularization(nn.Module):
         ## New Regularizer
         ## Start here
         # iter_loss = (((predictions.iter_jacobians) - torch.eye(3, 3, device = self.device)) ** 2).mean()
-        r_loss = iter_loss 
+        r_loss = iter_loss
         ## Enf here
         
         loss = (loss_edge)*self.weight + r_loss * 0.25

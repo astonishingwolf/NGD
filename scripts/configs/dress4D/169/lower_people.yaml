@@ -39,8 +39,8 @@ timeloop:
 
 
   # Save Paths
-  output_path: /hdd_data/nakul/soham/New_Results/Dress4D/169/Remeshed/lower
-  Exp_name : Remesh
+  output_path: /hdd_data/nakul/soham/New_Results/Dress4D/169/Without_Noise/lower
+  Exp_name : Final
 
   save_instance : True
   save_index : 0

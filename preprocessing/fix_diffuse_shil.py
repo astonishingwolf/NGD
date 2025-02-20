@@ -83,10 +83,10 @@ def fix_diffuse_shil(shil_dir, diffuse_dir, output_dir):
         diffuse_file = os.path.join(diffuse_dir, f"{shil_file.split('.')[0].split('_')[0]}.png")
         diffuse_image = Image.open(diffuse_file).convert("L")
         diffuse_image = np.array(diffuse_image)
-        masked_diffuse = (diffuse_image * shil_image).astype(np.uint8) # Add channel axis
-        # breakpoint()
+        masked_diffuse = (diffuse_image * shil_image).astype(np.uint8) 
         output_path = os.path.join(output_dir, f"{shil_file.split('.')[0].split('_')[0]}.png")
         masked_diffuse = masked_diffuse[..., np.newaxis]
+        # breakpoint()
         Image.fromarray(masked_diffuse[..., [-1,-1,-1]]).save(output_path)
         print(f"Saved masked normal: {output_path}")
 
@@ -126,8 +126,8 @@ if __name__ == "__main__":
     # shil_upper = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/human/shils_upper'
     # fix_upper_shil(shil_lower, shil_upper)
 
-    # shil_lower = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/human/shils_lower'
-    # diffuse_global = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/human/diffuse'
-    # diffuse_lower = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/human/diffuse_lower'
-    # fix_diffuse_shil(shil_lower, diffuse_global, diffuse_lower)
+    shil_lower = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/187/Take1/human/shils_upper'
+    diffuse_global = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/187/Take1/human/diffuse'
+    diffuse_lower = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/187/Take1/human/diffuse_upper'
+    fix_diffuse_shil(shil_lower, diffuse_global, diffuse_lower)
 
