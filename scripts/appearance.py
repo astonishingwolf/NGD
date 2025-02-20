@@ -85,7 +85,8 @@ def appearance_training_loop(cfg, device = 'cuda'):
     n_verts_cannonical = jacobian_source.vertices_from_jacobians(gt_jacobians.detach()).squeeze()
     n_verts_cannonical = n_verts_cannonical + torch.mean(sources_vertices.detach(), axis=0, keepdims=True) 
     total_frames = dataloader.__len__()
-    indices, uvs = xatlas_uvmap(n_verts_cannonical, source_faces)
+    indices, uvs, vmapping = xatlas_uvmap(n_verts_cannonical, source_faces)
+    # breakpoint()
     indices = indices.to(torch.int32)
 
     y_coords = torch.arange(cfg.texture_map[0])
@@ -150,7 +151,7 @@ def appearance_training_loop(cfg, device = 'cuda'):
     img_pixel_indices = img_pixel_indices / 1024.0
     warm_up = get_linear_interpolation_func(0, 1, max_steps = 100)
     
-    for e in range(cfg.tlex_epochs):
+    for e in range(cfg.tex_epochs):
 
         loss_each_epoch = 0.0
         
@@ -260,4 +261,5 @@ def appearance_training_loop(cfg, device = 'cuda'):
     torch.save(uv_tex_static, os.path.join(output_path, 'texture_mlp_static.pt'))
     torch.save(uvs, os.path.join(output_path, 'uvs.pt'))
     torch.save(indices, os.path.join(output_path, 'indices.pt'))
+    torch.save(vmapping, os.path.join(output_path, 'vmapping.pt'))
     torch.save(texture_mlp_dynamic.state_dict(), os.path.join(output_path, 'texture_mlp_dynamic.pt'))

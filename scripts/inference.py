@@ -163,6 +163,8 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
     os.makedirs(save_image_dir, exist_ok=True)
     save_image_dir = os.path.join(output_path, 'save_img_back')
     os.makedirs(save_image_dir, exist_ok=True)
+    texture_save = os.path.join(output_path, 'texture_save')
+    os.makedirs(texture_save, exist_ok=True)
     with torch.no_grad():
         for _,sample in enumerate(dataloader):
             time = sample['time']
@@ -246,6 +248,7 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
                 # breakpoint()
                 
                 uv_tex_total = torch.clamp(uv_tex_total, 0, 1)
+                save_any_image(uv_tex_total, os.path.join(output_path, 'texture_save',f'final_texture_{idx[0].detach().cpu().numpy()}.png'))
                 r_mvp = torch.matmul(sample['proj'], sample['mv'])
                 textured_image = render_texture(glctx, r_mvp, new_vertices, source_faces.to(torch.int32), uvs, indices, uv_tex_total , 1080, True, max_mip_level) 
                 texture_images.append(textured_image)

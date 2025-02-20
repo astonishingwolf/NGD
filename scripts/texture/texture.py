@@ -43,14 +43,15 @@ def xatlas_uvmap(v_pos, faces):
     v_pos = v_pos.detach().cpu().numpy()
     faces = faces.detach().cpu().numpy()
     
-    _, indices, uvs = xatlas.parametrize(v_pos, faces)
+    vmapping, indices, uvs = xatlas.parametrize(v_pos, faces)
+    # breakpoint()
     indices_int64 = indices.astype(np.uint64, casting='same_kind').view(np.int64)
     # breakpoint()
     # vmapping = torch.tensor(vmapping, dtype = torch.float32, device='cuda')
     uvs = torch.tensor(uvs, dtype=torch.float32, device='cuda')
     indices_tensor = torch.tensor(indices_int64, dtype=torch.int64, device='cuda') 
 
-    return indices_tensor, uvs
+    return indices_tensor, uvs, vmapping
 
 def update_texture_learning_rate(self, optimizer,iteration):
     for param_group in optimizer:

@@ -13,11 +13,11 @@ timeloop:
   warm_ups_remesh : 400
   remesh_freq : 200
   batch_size : 1
-  model : hashgrid_vd
+  model : general
   hidden_layers : 3
   pose_noise : False
   noise_level : 0.002
-  vertex_noise : False
+  vertex_noise : True
   skinning_func : rbf  
   stop_train_after_warmup : True
   use_grad_clipping : False
@@ -39,7 +39,7 @@ timeloop:
 
 
   # Save Paths
-  output_path: /hdd_data/nakul/soham/Dress4DRecon_Ortho/169/lower
+  output_path: /hdd_data/nakul/soham/Dress4DRecon_Ortho/167/lower
   Exp_name : Remeshed
 
   save_instance : False
@@ -50,15 +50,15 @@ timeloop:
   
   # Input Paths
   smpl_path : /home/nakul/soham/3d/fixnormalndepth/SMPL_NEUTRAL.pkl
-  smpl_pkl : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/smpl/combined_smpl_camera.pkl
-  mesh: /hdd_data/nakul/soham/Template_dir/pants/pants.obj
-  target_diffuse_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/lower_cloth/diffuse_seg
-  target_shil_maps :  /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/lower_cloth/shil
-  target_shil_seg_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/lower_cloth/shil_seg
-  target_complete_shil_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/shil
-  target_hand_mask : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/hands_mask
+  smpl_pkl : /hdd_data/nakul/soham/Dataset/Dress4D/processed/167/Take0/smpl/combined_smpl_camera.pkl
+  mesh: /hdd_data/nakul/soham/Template_dir/full_shirt/fullsleeve_tshirt.obj
+  target_diffuse_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/167/Take0/upper_cloth/diffuse_seg
+  target_shil_maps :  /hdd_data/nakul/soham/Dataset/Dress4D/processed/167/Take0/upper_cloth/shil
+  target_shil_seg_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/167/Take0/upper_cloth/shil_seg
+  target_complete_shil_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/167/Take0/human/shil
+  target_hand_mask : /hdd_data/nakul/soham/Dataset/Dress4D/processed/167/Take0/hands_mask
   # target_normal : /hdd_data/nakul/soham/Dataset/People_Snapshot/male-4-sport/norm_seg
-  target_images : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/lower_cloth/textured_seg
+  target_images : /hdd_data/nakul/soham/Dataset/Dress4D/processed/167/Take0/upper_cloth/textured_seg
   image_size : 1080   
 
   # Training Parameters
