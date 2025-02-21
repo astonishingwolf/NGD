@@ -45,6 +45,8 @@ from scripts.utils.helper import *
 from scripts.models.model_utils import get_expon_lr_func
 from scripts.losses.rendering_loss import ssim
 from scripts.models.model_utils import get_linear_interpolation_func
+from scripts.models.temporal_texture import ClothTexture
+
 # from scripts.geometry import geometry_training_loop
 # from scripts.appearnce import appearance_training_loop
 # from scripts.inference import time_eval
@@ -131,16 +133,9 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
         max_mip_level = cfg.max_mip_level
 
         if cfg.use_dynamic_texture:
-            encoding = tcnn.Encoding(3, hash_cfg["encoding"])
-            network = tcnn.Network(encoding.n_output_dims, 3, hash_cfg["network"])
-            texture_mlp_dynamic = torch.nn.Sequential(encoding, network)
-            texture_mlp_dynamic = tcnn.NetworkWithInputEncoding(
-                n_input_dims=4,
-                n_output_dims=3,
-                encoding_config=hash_cfg["encoding"],
-                network_config=hash_cfg["network"],
-            ).to(device)
-            texture_mlp_dynamic.load_state_dict(torch.load(os.path.join(output_path, 'texture_mlp_dynamic.pt')))
+            cloth_texture = ClothTexture(cfg)
+            # cloth_texture.training_init()
+            cloth_texture.load_weights(os.path.join(output_path,'texture_model_weights.pth'))
             y_coords = torch.arange(cfg.texture_map[0])
             x_coords = torch.arange(cfg.texture_map[1])            
             grid_y, grid_x = torch.meshgrid(y_coords, x_coords, indexing='ij')
@@ -234,15 +229,13 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
                     pose = sample['reduced_pose_eight']
                     time_extended = time[None, None, ...].repeat(img_pixel_indices.shape[0], img_pixel_indices.shape[1], 1) 
                     pose_extended = pose[None, ...].repeat(img_pixel_indices.shape[0], img_pixel_indices.shape[1], 1)
-                    tex_coords = torch.cat((img_pixel_indices, pose_extended), dim  = 2).view(-1,4)
-                    uv_tex_dynamic = texture_mlp_dynamic(tex_coords.view(-1,4))
+                    input = SimpleNamespace(
+                    img_pixel_indices=img_pixel_indices,
+                    pose_extended=pose_extended,
+                    )
+                    uv_tex_dynamic = cloth_texture.forward(input)
                     uv_tex_dynamic = uv_tex_dynamic.view(img_pixel_indices.shape[0], img_pixel_indices.shape[1], 3)
                     uv_tex_total = uv_tex_static + uv_tex_dynamic
-                    # tex_coords = torch.cat((img_pixel_indices, time_extended_texture), dim  = 2).view(-1,3)
-                    # # tex_coords = torch.cat((img_pixel_indices, time_extended), dim  = 2).view(-1,3)
-                    # uv_tex_dynamic = texture_mlp_dynamic(tex_coords.view(-1,3))
-                    # uv_tex_dynamic = uv_tex_dynamic.view(img_pixel_indices.shape[0], img_pixel_indices.shape[1], 3)
-            
                 else:
                     uv_tex_total = uv_tex_static
                 # breakpoint()

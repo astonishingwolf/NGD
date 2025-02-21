@@ -17,7 +17,6 @@ from torchvision.utils import save_image
 from torch.utils.tensorboard import SummaryWriter
 import tinycudann as tcnn
 import commentjson as json
-
 from scripts.utils import *
 from scripts.models.model import Model
 from scripts.utils.general_utils import load_mesh_path, calculate_face_centers, calculate_face_normals

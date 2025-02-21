@@ -45,6 +45,8 @@ from scripts.models.model_utils import get_expon_lr_func
 from scripts.losses.rendering_loss import ssim
 from scripts.models.model_utils import get_linear_interpolation_func
 from scripts.models.model_utils import get_embedder
+from scripts.models.texture_model import TextureModel
+from scripts.models.temporal_texture import ClothTexture
 
 with open("scripts/config_hash.json") as f:
 	hash_cfg = json.load(f)
@@ -82,12 +84,19 @@ def appearance_training_loop(cfg, device = 'cuda'):
     cam_data = (MonocularDataset4DDress(cfg) if cfg.model_type == 'Dress4D' else MonocularDataset(cfg))
         
     dataloader = DataLoader(dataset = cam_data, batch_size = cfg.batch_size, shuffle=True)
-    n_verts_cannonical = jacobian_source.vertices_from_jacobians(gt_jacobians.detach()).squeeze()
-    n_verts_cannonical = n_verts_cannonical + torch.mean(sources_vertices.detach(), axis=0, keepdims=True) 
+    if cfg.remeshing:
+        delta =  torch.from_numpy(np.load(os.path.join(remesh_dir, f'delta_transform.npy'))).to(device)  
+        n_verts_cannonical = jacobian_source.vertices_from_jacobians(gt_jacobians.detach()).squeeze()
+        n_verts_cannonical = n_verts_cannonical + torch.mean(sources_vertices.detach(), axis=0, keepdims=True) - delta
+    else:
+        n_verts_cannonical = jacobian_source.vertices_from_jacobians(gt_jacobians.detach()).squeeze()
+        n_verts_cannonical = n_verts_cannonical + torch.mean(sources_vertices.detach(), axis=0, keepdims=True) 
     total_frames = dataloader.__len__()
     indices, uvs, vmapping = xatlas_uvmap(n_verts_cannonical, source_faces)
-    # breakpoint()
     indices = indices.to(torch.int32)
+    
+    cloth_texture = ClothTexture(cfg)
+    cloth_texture.training_init()
 
     y_coords = torch.arange(cfg.texture_map[0])
     x_coords = torch.arange(cfg.texture_map[1])            
@@ -96,22 +105,6 @@ def appearance_training_loop(cfg, device = 'cuda'):
 
     uv_tex_static = torch.full([cfg.texture_map[0], cfg.texture_map[1], 3], 0.2, device='cuda', requires_grad=True)
     max_mip_level = cfg.max_mip_level
-    t_multires = 10
-    pca_tex_dim = 2
-    indices_encoding = tcnn.Encoding(2, hash_cfg["encoding"])
-    # pose_encoding, pose_encoding_ch = get_embedder(t_multires,pca_tex_dim)
-    pose_encoding = tcnn.Encoding(4, hash_cfg["encoding"])
-    texture_network = tcnn.Network(indices_encoding.n_output_dims + pose_encoding.n_output_dims, 3, hash_cfg["network"])
-    
-    # texture_mlp_dynamic = torch.nn.Sequential(encoding, network)
-
-    texture_mlp_dynamic = tcnn.NetworkWithInputEncoding(
-        n_input_dims=4,
-        n_output_dims=3,
-        encoding_config=hash_cfg["encoding"],
-        network_config=hash_cfg["network"],
-    ).to(device)
-
     l = [
             {'params': [uv_tex_static],
             'lr': cfg.texture_lr_init * cfg.spatial_lr_scale,
@@ -122,27 +115,6 @@ def appearance_training_loop(cfg, device = 'cuda'):
                                                     lr_final=cfg.texture_lr_final,
                                                     lr_delay_mult=cfg.texture_lr_delay_mult,
                                                     max_steps=cfg.texture_lr_max_steps)
-
-    # l = [
-    #     {'params': list(indices_encoding.parameters()),
-    #     'lr': 1e-2,
-    #     "name": "texture"},
-    #     {'params': list(pose_encoding.parameters()),
-    #     'lr': 1e-2,
-    #     "name": "texture"},
-    #     {'params': list(texture_network.parameters()),
-    #     'lr': 1e-2,
-    #     "name": "texture"}
-    # ]
-    
-    l = [
-        {'params': list(texture_mlp_dynamic.parameters()),
-        'lr': 1e-2,
-        "name": "texture"},
-    ]
-    optimizer_dynamic = torch.optim.Adam(l, lr=0.01)
-    decay_rate = 0.99  # Adjust this to control the decay rate per epoch/step
-    scheduler_dynamic = torch.optim.lr_scheduler.ExponentialLR(optimizer_dynamic, gamma=decay_rate)
 
     glctx = dr.RasterizeCudaContext()
     if cfg.save_instance:
@@ -156,7 +128,8 @@ def appearance_training_loop(cfg, device = 'cuda'):
         loss_each_epoch = 0.0
         
         for it,sample in enumerate(dataloader):
-              
+            
+            cloth_texture.optimizer.zero_grad()
             time = sample['time']
             pose = sample['reduced_pose']
             idx = sample['idx']
@@ -166,16 +139,23 @@ def appearance_training_loop(cfg, device = 'cuda'):
                 n_verts_cannonical_before = garment_skinning_function(n_verts_cannonical.unsqueeze(0).detach(), sample['pose'], sample['betas'], body, garment_skinning)
             
             n_verts_cannonical_before = n_verts_cannonical_before.squeeze(0)
-            face_normals = calculate_face_normals(n_verts_cannonical, source_faces)
-    
-            face_centers = calculate_face_centers(n_verts_cannonical, source_faces)
+            if cfg.model_type == 'Dress4D':
+                vertices_post_skinning_cannonical = garment_skinning_function(n_verts_cannonical.unsqueeze(0), sample['pose'], \
+                                                                    sample['betas'], body, garment_skinning, sample['translation'])
+            else:
+                vertices_post_skinning_cannonical = garment_skinning_function(n_verts_cannonical.unsqueeze(0), sample['pose'], \
+                                                                    sample['betas'],body, garment_skinning)
+
+            vertices_post_skinning_cannonical = vertices_post_skinning_cannonical.squeeze(0)
+            cannonical_face_normals = calculate_face_normals(vertices_post_skinning_cannonical.detach(), source_faces)
+            cannonical_face_centers = calculate_face_centers(vertices_post_skinning_cannonical.detach(), source_faces)  
             time_extended = time[None, ...].repeat(face_centers.shape[0], 1)
             pose_extended = pose.repeat(face_centers.shape[0], 1)
             input = SimpleNamespace(
                         n_verts = n_verts_cannonical,
                         n_faces = source_faces,
-                        face_centers = face_centers,
-                        face_normals = face_normals,
+                        face_centers = cannonical_face_centers,
+                        face_normals = cannonical_face_normals,
                         time = time,
                         time_extended = time_extended,
                         pose_extended = pose_extended
@@ -184,7 +164,7 @@ def appearance_training_loop(cfg, device = 'cuda'):
             residual_jacobians = residual_jacobians.view(residual_jacobians.shape[0],3,3)
             iter_jacobians = gt_jacobians + residual_jacobians
             n_vert = jacobian_source.vertices_from_jacobians(iter_jacobians).squeeze()
-            n_vert = n_vert + torch.mean(sources_vertices.detach(), axis=0, keepdims=True)            
+            n_vert = n_vert + torch.mean(sources_vertices.detach(), axis=0, keepdims=True) - delta           
             if cfg.model_type == 'Dress4D':
                 new_vertices = garment_skinning_function(n_vert.unsqueeze(0), sample['pose'], sample['betas'], body, garment_skinning, sample['translation'])
             else:
@@ -197,26 +177,20 @@ def appearance_training_loop(cfg, device = 'cuda'):
             pose_extended = pose[None, ...].repeat(img_pixel_indices.shape[0], img_pixel_indices.shape[1], 1)
             if cfg.use_dynamic_texture and e >=  cfg.texture_warm_ups:
                 
-                # tex_coords = torch.cat((img_pixel_indices, time_extended), dim  = 2).view(-1,3)
-                # uv_tex_dynamic = texture_mlp_dynamic(tex_coords.view(-1,3))
-                # uv_tex_dynamic = uv_tex_dynamic.view(img_pixel_indices.shape[0], img_pixel_indices.shape[1], 3)
-                
-                tex_coords = torch.cat((img_pixel_indices, pose_extended), dim  = 2).view(-1,4)
-                uv_tex_dynamic = texture_mlp_dynamic(tex_coords.view(-1,4))
+                input = SimpleNamespace(
+                img_pixel_indices=img_pixel_indices,
+                pose_extended=pose_extended,
+                )
+                uv_tex_dynamic = cloth_texture.forward(input)
                 uv_tex_dynamic = uv_tex_dynamic.view(img_pixel_indices.shape[0], img_pixel_indices.shape[1], 3)
-
-                # tex_coords = img_pixel_indices
-                # pose_encoded = pose_encoding(pose_extended.view(-1,pca_tex_dim))
-                # texture_encoded = indices_encoding(tex_coords.view(-1,2))
-                # uv_tex_dynamic = texture_network(torch.cat((texture_encoded, pose_encoded), dim = 1))
-                # uv_tex_dynamic = uv_tex_dynamic.view(img_pixel_indices.shape[0], img_pixel_indices.shape[1], 3)
-            
-                # val = warm_up(e - cfg.texture_warm_ups)
-                # uv_tex_dynamic = uv_tex_dynamic * val
             else:
                 uv_tex_dynamic = torch.zeros_like(uv_tex_static)
 
+            # uv_tex_soft_max = uv_tex_static + uv_tex_dynamic
             uv_tex_soft_max = uv_tex_static + uv_tex_dynamic
+            # uv_tex_soft_max = torch.clamp(uv_tex_soft_max, 0, 1)
+            
+            # uv_tex_soft_max = uv_tex_static + uv_tex_dynamic 1           
             # uv_tex_soft_max = torch.clamp(uv_tex_soft_max, 0, 1)
             
             r_mvp = torch.matmul(sample['proj'], sample['mv'])
@@ -228,38 +202,27 @@ def appearance_training_loop(cfg, device = 'cuda'):
             textured_image_masked = torch.mul(textured_image.permute(0,3,1,2), sample['target_shil'])
 
             target_seg_image =  torch.mul(sample['tex_image'], sample['target_shil'])
-        
-            # loss_image = F.mse_loss(textured_image_masked,target_seg_image) 
-            # # loss_image = F.mse_loss(textured_image.permute(0,3,1,2),sample['tex_image']) 
-            # loss_ssim = ssim(textured_image_masked, target_seg_image)
             loss = (textured_image_masked - target_seg_image.to(textured_image_masked.dtype)) ** 2 / (textured_image_masked.detach() ** 2 + 0.01) 
             loss = loss.mean()
-            # loss = (1-cfg.ssim_coeff) * loss_image + cfg.ssim_coeff * loss_ssim
-            # loss = loss_image 
             optimizer_static.zero_grad()
-            optimizer_dynamic.zero_grad() 
             loss.backward()
             optimizer_static.step()
             new_lr = scheduler_static((e)*total_frames + it)
+        
             for param_group in optimizer_static.param_groups:
                 if param_group["name"] == "texture":
                     param_group['lr'] =new_lr
-                        
-            optimizer_dynamic.step()    
-            
-            new_lr = scheduler_static((e - cfg.texture_warm_ups)*total_frames + it)
-            for param_group in optimizer_dynamic.param_groups:
-                if param_group["name"] == "texture":
-                    param_group['lr'] =new_lr            
-            
+
+            cloth_texture.step(e, it, total_frames)          
             loss_each_epoch += loss.item()
 
         save_any_image(uv_tex_soft_max,os.path.join(output_path, 'logs', f"save_tex_{e}.png"))
         print(f"Epoch {e} loss {loss_each_epoch}")
-        # print(f"Texturedd Image {textured_image_masked[textured_image_masked > 0].mean()}")
         
     torch.save(uv_tex_static, os.path.join(output_path, 'texture_mlp_static.pt'))
     torch.save(uvs, os.path.join(output_path, 'uvs.pt'))
     torch.save(indices, os.path.join(output_path, 'indices.pt'))
     torch.save(vmapping, os.path.join(output_path, 'vmapping.pt'))
-    torch.save(texture_mlp_dynamic.state_dict(), os.path.join(output_path, 'texture_mlp_dynamic.pt'))
+    # torch.save(texture_mlp_dynamic.state_dict(), os.path.join(output_path, 'texture_mlp_dynamic.pt'))
+    # breakpoint()
+    cloth_texture.save_weights(output_path)
