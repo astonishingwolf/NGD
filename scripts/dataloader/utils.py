@@ -22,7 +22,11 @@ class WeakPerspectiveCamera(pyrender.Camera):
             zfar=zfar,
             name=name,
         )
-        self.scale = scalget_targets_diffuse_erosion
+        self.scale = scale
+        self.translation = translation
+
+    def get_projection_matrix(self, width=None, height=None):
+        
         P = np.eye(4)
         P[0, 0] = self.scale[0]
         P[1, 1] = self.scale[1]
