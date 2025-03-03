@@ -126,8 +126,8 @@ if __name__ == "__main__":
     # shil_upper = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/human/shils_upper'
     # fix_upper_shil(shil_lower, shil_upper)
 
-    shil_lower = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/187/Take1/human/shils_upper'
-    diffuse_global = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/187/Take1/human/diffuse'
-    diffuse_lower = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/187/Take1/human/diffuse_upper'
+    shil_lower = '/hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_tic/shils_lower'
+    diffuse_global = '/hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_tic/diffuse'
+    diffuse_lower = '/hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_tic/diffuse_lower'
     fix_diffuse_shil(shil_lower, diffuse_global, diffuse_lower)
 

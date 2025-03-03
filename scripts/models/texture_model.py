@@ -30,8 +30,8 @@ class HashGrid_w_pose(nn.Module):
         # breakpoint()
         input_coords = torch.cat((inputs.img_pixel_indices, inputs.pose_extended), dim=-1).view(-1, 4)
         pos_encoded = self.uv_encoding(input_coords)
-        uv_tex_dynamic = self.texture_network(pos_encoded)*20.0
-        
+        uv_tex_dynamic = self.texture_network(pos_encoded)
+        # breakpoint()
         return uv_tex_dynamic
 
 class HashGrid_w_Reg(nn.Module):
@@ -44,8 +44,8 @@ class HashGrid_w_Reg(nn.Module):
         self.embed_uv_fn, self.uv_ch = get_embedder(self.t_multires, 2)
         # self.normal_encoding = tcnn.Encoding(3, hash_cfg["encoding"])
         # self.pose_encoding = tcnn.Encoding(4, hash_cfg["encoding"])
-        self.uv_mlp = tcnn.Network(self.uv_ch, 9, hash_cfg["tex_network"])
-        self.texture_network = tcnn.Network(self.uv_encoding.n_output_dims + 9, 3, hash_cfg["network"])
+        self.uv_mlp = tcnn.Network(self.uv_ch, 12, hash_cfg["tex_network"])
+        self.texture_network = tcnn.Network(self.uv_encoding.n_output_dims + 12, 3, hash_cfg["network"])
 
     def forward(self, inputs) -> torch.Tensor:
 

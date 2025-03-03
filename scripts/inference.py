@@ -165,8 +165,7 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
             time = sample['time']
             idx = sample['idx']
             pose = sample['reduced_pose']
-            if cfg.model_type == 'Dress4D':
-                
+            if cfg.model_type == 'Dress4D':      
                 n_verts_cannonical_before = garment_skinning_function(n_verts_cannonical.unsqueeze(0).detach(), sample['pose'], sample['betas'], body, garment_skinning, sample['translation'])
             else:
                 n_verts_cannonical_before = garment_skinning_function(n_verts_cannonical.unsqueeze(0).detach(), sample['pose'], sample['betas'], body, garment_skinning)
@@ -199,13 +198,14 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
             residual_jacobians = cloth_deform.forward(input)
             residual_jacobians = residual_jacobians.view(residual_jacobians.shape[0],3,3)
             iter_jacobians = gt_jacobians + residual_jacobians
-
             n_vert = jacobian_source.vertices_from_jacobians(iter_jacobians).squeeze()
             if cfg.remeshing:
                 n_vert = n_vert + torch.mean(sources_vertices.detach(), axis=0, keepdims=True)  - delta
             else :
                 n_vert = n_vert + torch.mean(sources_vertices.detach(), axis=0, keepdims=True)
-
+            
+            # if idx[0] == 0:
+            #     breakpoint()
             if idx[0] == 98.0:
                 tri_mesh_cnannonical = trimesh.Trimesh(vertices=n_vert.detach().cpu().numpy(), faces = source_faces.cpu().numpy())
                 tri_mesh_cnannonical.export(os.path.join(output_path, 'cannonical', f'cannonical_{idx[0].detach().cpu().numpy()}.obj')) 
@@ -214,6 +214,8 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
             else:
                 new_vertices = garment_skinning_function(n_vert.unsqueeze(0), sample['pose'], sample['betas'], body, garment_skinning)
             new_vertices = new_vertices.squeeze(0)   
+            # if idx[0] == 0:
+            #     breakpoint()
             renderer_front = AlphaRenderer(sample['mv'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])
             _, render_info,_ = gt_manager_source.render(new_vertices, source_faces, renderer_front)
             render_front = gt_manager_source.diffuse_images()
@@ -243,7 +245,7 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
                 uv_tex_total = torch.clamp(uv_tex_total, 0, 1)
                 save_any_image(uv_tex_total, os.path.join(output_path, 'texture_save',f'final_texture_{idx[0].detach().cpu().numpy()}.png'))
                 r_mvp = torch.matmul(sample['proj'], sample['mv'])
-                textured_image = render_texture(glctx, r_mvp, new_vertices, source_faces.to(torch.int32), uvs, indices, uv_tex_total , 1080, True, max_mip_level) 
+                textured_image = render_texture(glctx, r_mvp, new_vertices, source_faces.to(torch.int32), uvs, indices, uv_tex_total , 1080, False, max_mip_level) 
                 texture_images.append(textured_image)
                 textured_image_masked = torch.mul(textured_image, mask_front)
                 save_any_image(textured_image, os.path.join(output_path, 'save_img_texture',f'final_front_texture_{idx[0].detach().cpu().numpy()}.png'))

@@ -46,15 +46,15 @@ def generate_shil_maps(shil_path, save_dir : str = None):
     image.save(os.path.join(save_dir,f'{frame_id}.png'))
     
 def main():
-    normal_path = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/187/Take1/human/sapien_norm'
-    shil_path = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/187/Take1/human/sapien_seg'
-    save_dir = '/hdd_data/nakul/soham/Dataset/Dress4D/processed/187/Take1/human/diffuse'
+    normal_path = '/hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_tic/sapien_norm'
+    shil_path = '/hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_tic/sapien_seg'
+    save_dir = '/hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_tic/diffuse'
     # save_dir_shils = '/hdd_data/nakul/soham/people_snapshot/people_snapshot_public/male-1-sport/images_shils'
     
     seg_files = natsorted(glob.glob(os.path.join(shil_path, '*_seg.npy')))
     normal_files = natsorted(glob.glob(os.path.join(normal_path, '*.npy')))
     for i,normal_file in enumerate(normal_files):
-        # print(i)
+        print(i)
         generate_diffuse_map(seg_files[i], normal_file, save_dir)
     
     # for i,shil_file in enumerate(seg_files):

@@ -95,9 +95,9 @@ class MonocularDataset4DDress(Dataset):
         return sample
 
 
-class MonocularTextureDataset(Dataset):
-
+class MonocularTextureDataset4DDress(Dataset):
     def __init__(self, cfg):
+
         """
         Parameters:
         ----------
@@ -105,38 +105,60 @@ class MonocularTextureDataset(Dataset):
             Configuration object.
         """
         start_end = [cfg.start_frame, cfg.end_frame]
-        self.mv, self.proj, self.pose, self.betas = load_camera_and_smpl(cfg,cfg.smpl_pkl,start_end)
+        self.mv, self.proj, self.pose, self.betas, self.translation = load_camera_and_smpl_dress4d(cfg,cfg.smpl_pkl,start_end)
+        self.reduced_pose = calculate_pca(self.pose)
+        self.reduced_pose_eight = calculate_pca(self.pose, dim=2)
+        shift = 1
+        self.mv_left = torch.cat([self.mv[shift:], self.mv[:shift]])  
+        self.mv_right = torch.cat([self.mv[-shift:], self.mv[:-shift]]) 
+        shift = 10
+        self.mv_back = torch.cat([self.mv[shift:], self.mv[:shift]])
         self.time_iterators = torch.linspace(0, 1, len(self.mv)).to(DEVICE)
-        self.target_image, self.background = get_target_imgs(cfg.target_images, cfg.image_size, start_end,cfg.skip_frames)
+        self.orig_image = get_targets_diffuse(cfg.target_images, cfg.image_size, start_end, cfg.skip_frames)
         self.target_diffuse = get_targets_diffuse(cfg.target_diffuse_maps, cfg.image_size, start_end,cfg.skip_frames)
-        self.target_shil = get_targets_diffuse(cfg.target_shil_maps, cfg.image_size,start_end,cfg.skip_frames)
+        # self.target_shil = get_targets_diffuse(cfg.target_shil_maps, cfg.image_size,start_end,cfg.skip_frames)
+        self.target_shil = get_targets_diffuse_erosion(cfg.target_shil_maps, cfg.image_size,start_end,cfg.skip_frames)
         self.target_complete_shil = get_targets_diffuse(cfg.target_complete_shil_maps, cfg.image_size,start_end,cfg.skip_frames)
-        # self.target_norm_map = get_targets_npy(cfg.target_normal, cfg.image_size,start_end,cfg.skip_frames)
+        self.target_shil_seg = get_targets_diffuse(cfg.target_shil_seg_maps, cfg.image_size,start_end,cfg.skip_frames)
+        self.target_hands_shil = get_targets_diffuse(cfg.target_hand_mask, cfg.image_size,start_end,cfg.skip_frames)
+        self.target_depth = get_targets_npy(cfg.target_depth, cfg.image_size,start_end,cfg.skip_frames)
+        self.target_norm_map = get_targets_normal(cfg.target_normal, cfg.image_size,start_end,cfg.skip_frames)
         self.iterator_helper = torch.arange(start_end[0],start_end[1],cfg.skip_frames)
-
+        # self.target_depth = torch.mul(self.target_depth, self.target_complete_shil.squeeze(1))
+        # min_vals =  self.target_depth.amin(dim=(1, 2), keepdim=True) 
+        # max_vals =  self.target_depth.amax(dim=(1, 2), keepdim=True) 
+        # self.target_depth_norm = ( self.target_depth - min_vals) / (max_vals - min_vals + 1e-8)          
+        # self.target_depth_norm = 1 - self.target_depth_norm
+        # self.target_depth_norm = self.target_depth
     def __len__(self) -> int:
         return len(self.target_diffuse)
 
     def __getitem__(self, idx: int):
         
         sample = {}
-        idx = 35
         sample['mv'] = self.mv[idx]
+        sample['mv_left'] = self.mv_left[idx]
+        sample['mv_right'] = self.mv_right[idx]
+        sample['mv_back'] = self.mv_back[idx]
         sample['proj'] = self.proj[idx]
         sample['time'] = self.time_iterators[idx]
         sample['target_diffuse'] = self.target_diffuse[idx]
         sample['target_shil'] = self.target_shil[idx]
+        sample['target_shil_seg'] = self.target_shil_seg[idx]
         sample['target_complete_shil'] = self.target_complete_shil[idx]
-        ## Maybe some extra manipulation is needed
-        sample['target_image'] = self.target_image[idx]
-        sample['target_background'] = self.background[idx]
-        # sample['target_norm_map'] = self.target_norm_map[idx]
+        sample['hands_shil'] = self.target_hands_shil[idx]
+        # self.target_depth
+        sample['target_depth'] = self.target_depth[idx]
+        sample['target_norm_map'] = self.target_norm_map[idx]
+        sample['tex_image'] = self.orig_image[idx]
+        sample['reduced_pose'] = self.reduced_pose[idx]
+        sample['reduced_pose_eight'] =  self.reduced_pose_eight[idx]
         sample['pose'] = self.pose[idx]
         sample['betas'] = self.betas[idx]
+        sample['translation'] = self.translation[idx]
         sample['idx'] = self.iterator_helper[idx]
         
         return sample
-
 def main():
     
     cfg = {

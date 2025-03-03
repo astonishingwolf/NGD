@@ -2,31 +2,30 @@ gpu: 0
 seed: 99
 
 timeloop:
-  # Model Params
-  model_type : Dress4D
+  model_type : PeopleSnapshot
   num_epochs : 1200
   device : cuda:0
   start_frame : 0
-  end_frame : 100
-  skip_frames : 1
+  end_frame : 225
+  skip_frames : 2
   warm_ups : 100
   warm_ups_remesh : 400
   remesh_freq : 200
   batch_size : 1
-  model : hashgrid
+  model : hashgrid_vd
   hidden_layers : 3
   pose_noise : False
   noise_level : 0.002
-  vertex_noise : False
+  vertex_noise : True
   skinning_func : rbf  
   stop_train_after_warmup : True
   use_grad_clipping : False
   retriangulate: 0
-  remeshing : False
+  remeshing : True
   create_new_optimizer : False
   gradient_clipping : True
   interpolate_new_optimizer : True
-
+  custom_template : True
 
   #Remeshing
   remesh_percentile : 0.9
@@ -39,29 +38,30 @@ timeloop:
 
 
   # Save Paths
-  output_path: /hdd_data/nakul/soham/Results/PeopleSnapshot/arnan_dance/lower
-  Exp_name : Normal_try
+  output_path: /hdd_data/nakul/soham/New_Results/PeopleSnapshot/anran_dance/Remeshed/lower
+  Exp_name : Final
 
 
   save_instance : True
-  save_index : 22
-
+  save_index : 0
+  save_freq : 100
   remesh_percentile : 0.8
 
   
   # Input Paths
   smpl_path : /home/nakul/soham/3d/fixnormalndepth/SMPL_NEUTRAL.pkl
   smpl_pkl : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_dance/4dhumans/output_data.pkl
-  mesh: /hdd_data/nakul/soham/Template_dir/skirt/straight_skirt.obj
-  target_diffuse_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/lower_cloth/diffuse_seg
-  target_shil_maps :  /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/lower_cloth/shil_seg
-  target_shil_seg_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/lower_cloth/shil_seg
-  target_complete_shil_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/human/shil
-  target_hand_mask : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/hands_mask
-  target_depth : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/saipens/depth/sapiens_0.6b
-  target_normal : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/human/sapien_norm
-  target_images : /hdd_data/nakul/soham/Dataset/Dress4D/processed/185/Take4/lower_cloth/textured_seg
-  image_size : 1080   
+  template_smpl_pkl : /hdd_data/nakul/soham/Template_dir/PeopleSnapshot/anran_dance/smpl.pkl
+  mesh: /hdd_data/nakul/soham/Template_dir/PeopleSnapshot/anran_dance/lower/mesh.obj
+  target_diffuse_maps : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_dance/diffuse_lower
+  target_shil_maps : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_dance/shils_lower
+  target_shil_seg_maps : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_dance/shils_lower
+  target_complete_shil_maps : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_dance/seg_human_mask
+  target_hand_mask : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_dance/hands_mask
+  target_depth : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_dance/sapien_depth
+  target_normal : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_dance/sapien_norm
+  target_images : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/anran_dance/raw_img
+  image_size : 1080    
 
   # Training Parameters
   position_lr_init : 0.0003 
@@ -96,8 +96,8 @@ timeloop:
   texture_lr_base_dyn : 1e-4
   texture_map : [1024,1024]
   max_mip_level : 3
-  tex_epochs : 3000
-  texture_warm_ups : 10
+  tex_epochs : 1000
+  texture_warm_ups : 100
   use_dynamic_texture : True
   texture_lr_init : 0.002
   texture_lr_final : 0.000016
@@ -106,4 +106,4 @@ timeloop:
   spatial_lr_scale : 5
   ssim_coeff : 0.001
  
-  # texture_lr_max_steps : 30_000
+

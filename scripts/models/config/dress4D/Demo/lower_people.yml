@@ -22,7 +22,7 @@ timeloop:
   stop_train_after_warmup : True
   use_grad_clipping : False
   retriangulate: 0
-  remeshing : True
+  remeshing : True 
   create_new_optimizer : False
   gradient_clipping : True
   interpolate_new_optimizer : True
@@ -39,29 +39,29 @@ timeloop:
 
 
   # Save Paths
-  output_path: /hdd_data/nakul/soham/New_Results/Dress4D/169/Remeshed/lower
+  output_path: /hdd_data/nakul/soham/New_Results/Dress4D/Demo/Remeshed/lower
   Exp_name : Final
-
 
   save_instance : True
   save_index : 0
   save_freq : 100
+
   remesh_percentile : 0.8
 
   
   # Input Paths
   smpl_path : /home/nakul/soham/3d/fixnormalndepth/SMPL_NEUTRAL.pkl
-  smpl_pkl : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/smpl/combined_smpl_camera.pkl
-  template_smpl_pkl : /hdd_data/nakul/soham/Template_dir/Dress4D/169/smpl.pkl
-  mesh: /hdd_data/nakul/soham/Template_dir/Dress4D/169/lower/mesh.obj
-  target_diffuse_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/diffuse_lower
-  target_shil_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/shils_lower
-  target_shil_seg_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/shils_lower
-  target_complete_shil_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/seg_human_mask
-  target_hand_mask : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/hands_mask
-  target_depth : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/sapien_depth
-  target_normal : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/sapien_norm
-  target_images : /hdd_data/nakul/soham/Dataset/Dress4D/processed/169/Take0/human/textured
+  smpl_pkl : /hdd_data/nakul/soham/Dataset/Dress4D/processed/Demo/Take1/smpl/combined_smpl_camera.pkl
+  mesh: /hdd_data/nakul/soham/Template_dir/Dress4D/Demo/lower/mesh.obj
+  template_smpl_pkl : /hdd_data/nakul/soham/Template_dir/Dress4D/Demo/smpl.pkl
+  target_diffuse_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/Demo/Take1/human/diffuse_lower
+  target_shil_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/Demo/Take1/human/shils_lower
+  target_shil_seg_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/Demo/Take1/human/shils_lower
+  target_complete_shil_maps : /hdd_data/nakul/soham/Dataset/Dress4D/processed/Demo/Take1/human/seg_human_mask
+  target_hand_mask : /hdd_data/nakul/soham/Dataset/Dress4D/processed/Demo/Take1/human/hands_mask
+  target_depth : /hdd_data/nakul/soham/Dataset/Dress4D/processed/Demo/Take1/human/sapien_depth
+  target_normal : /hdd_data/nakul/soham/Dataset/Dress4D/processed/Demo/Take1/human/sapien_norm
+  target_images : /hdd_data/nakul/soham/Dataset/Dress4D/processed/Demo/Take1/human/textured
   image_size : 1080   
 
   # Training Parameters
@@ -107,5 +107,6 @@ timeloop:
   texture_lr_max_steps : 100000
   spatial_lr_scale : 5
   ssim_coeff : 0.001
+ 
  
   # texture_lr_max_steps : 30_000

@@ -2,7 +2,6 @@ import os
 import yaml
 import torch
 from easydict import EasyDict
-
 from scripts.geometry import geometry_training_loop
 from scripts.appearance import appearance_training_loop
 from scripts.inference import Inference

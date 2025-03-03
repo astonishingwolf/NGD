@@ -39,7 +39,7 @@ timeloop:
 
 
   # Save Paths
-  output_path: /hdd_data/nakul/soham/New_Results/Dress4D/169/Non_Regularize/upper
+  output_path: /hdd_data/nakul/soham/New_Results/Dress4D/169/Remeshed/upper
   Exp_name : Final
 
 
@@ -92,12 +92,13 @@ timeloop:
   log_light_power: 3.0
 
   ## Texture
-  texture_recon : False
+  texture_model : hashgrid_base
+  texture_recon : True
   texture_lr_base : 1e-4
   texture_lr_base_dyn : 1e-4
   texture_map : [1024,1024]
   max_mip_level : 3
-  tex_epochs : 1000
+  tex_epochs : 1100
   texture_warm_ups : 100
   use_dynamic_texture : True
   texture_lr_init : 0.002
