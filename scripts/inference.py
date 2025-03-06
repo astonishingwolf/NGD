@@ -150,6 +150,13 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
 
     save_image_dir = os.path.join(output_path,'save_img_mask')
     os.makedirs(save_image_dir, exist_ok=True)
+    save_image_dir = os.path.join(output_path,'save_img_mask_back')
+    os.makedirs(save_image_dir, exist_ok=True)
+    save_image_dir = os.path.join(output_path,'save_img_mask_left')
+    os.makedirs(save_image_dir, exist_ok=True)
+    save_image_dir = os.path.join(output_path,'save_img_mask_right')
+    os.makedirs(save_image_dir, exist_ok=True)
+
     save_image_dir = os.path.join(output_path,'save_img_texture')
     os.makedirs(save_image_dir, exist_ok=True)
     save_image_dir = os.path.join(output_path,'save_img_texture_left')
@@ -255,12 +262,23 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
                 texture_images_left.append(textured_image)
                 # textured_image_masked = torch.mul(textured_image, mask_front)
                 save_any_image(textured_image, os.path.join(output_path, 'save_img_texture_left',f'final_left_texture_{idx[0].detach().cpu().numpy()}.png'))
+                renderer_back = AlphaRenderer(sample['mv_left'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])
+                _, render_info,_ = gt_manager_source.render(new_vertices, source_faces, renderer_back)
+                render_back = gt_manager_source.diffuse_images()
+                mask_front = gt_manager_source.shillouette_images()
+                save_any_image(mask_front, os.path.join(output_path, 'save_img_mask_left',f'final_left_mask_{idx[0].detach().cpu().numpy()}.png'))
 
                 r_mvp_right = torch.matmul(sample['proj'], sample['mv_right'])
                 textured_image = render_texture(glctx, r_mvp_right, new_vertices, source_faces.to(torch.int32), uvs, indices, uv_tex_total , 1080, True, max_mip_level) 
                 texture_images_right.append(textured_image)
                 # textured_image_masked = torch.mul(textured_image, mask_front)
                 save_any_image(textured_image, os.path.join(output_path, 'save_img_texture_right',f'final_right_texture_{idx[0].detach().cpu().numpy()}.png'))
+                renderer_back = AlphaRenderer(sample['mv_right'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])
+                _, render_info,_ = gt_manager_source.render(new_vertices, source_faces, renderer_back)
+                render_back = gt_manager_source.diffuse_images()
+                mask_front = gt_manager_source.shillouette_images()
+                save_any_image(mask_front, os.path.join(output_path, 'save_img_mask_right',f'final_right_mask_{idx[0].detach().cpu().numpy()}.png'))
+
 
             # back_mv = sample['mv'].clone()
             # back_mv[:,2,2] = -1 * back_mv[:,2,2]
@@ -269,6 +287,9 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
             renderer_back = AlphaRenderer(sample['mv_back'].to('cuda'), sample['proj'].to('cuda'), [cfg.image_size, cfg.image_size])
             _, render_info,_ = gt_manager_source.render(new_vertices, source_faces, renderer_back)
             render_back = gt_manager_source.diffuse_images()
+            mask_front = gt_manager_source.shillouette_images()
+            save_any_image(mask_front, os.path.join(output_path, 'save_img_mask_back',f'final_back_mask_{idx[0].detach().cpu().numpy()}.png'))
+
             back_images.append(render_back)
             save_any_image(render_back, os.path.join(output_path, 'save_img_back',f'render_back{idx[0].detach().cpu().numpy()}.png'))
             tri_mesh = trimesh.Trimesh(vertices=new_vertices.detach().cpu().numpy(), faces = source_faces.cpu().numpy())

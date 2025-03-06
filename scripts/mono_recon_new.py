@@ -18,7 +18,7 @@ def loop(cfg):
     torch.cuda.set_device(device)
 
     print("Running Geometry Training Loop")
-    geometry_training_loop(cfg, device)
+    # geometry_training_loop(cfg, device)
     
     if torch.cuda.is_available():
         torch.cuda.synchronize()
@@ -26,7 +26,7 @@ def loop(cfg):
 
     if cfg.get('texture_recon', False):
         print("Running Texture Reconstruction")
-        appearance_training_loop(cfg, device)
+        # appearance_training_loop(cfg, device)
 
         if torch.cuda.is_available():
             torch.cuda.synchronize()
