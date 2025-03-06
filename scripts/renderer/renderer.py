@@ -6,7 +6,7 @@ import nvdiffrast.torch as dr
 import imageio
 from scripts.renderer.utils import *
 
-LIGHT_DIR = [0., 0., 1.] 
+LIGHT_DIR = [0., 0., 1.0] 
 
 class AlphaRenderer(NormalsRenderer):
     '''
