@@ -278,7 +278,8 @@ def Inference(cfg,  texture = False, device = 'cuda', mesh_inter = None):
                 render_back = gt_manager_source.diffuse_images()
                 mask_front = gt_manager_source.shillouette_images()
                 save_any_image(mask_front, os.path.join(output_path, 'save_img_mask_right',f'final_right_mask_{idx[0].detach().cpu().numpy()}.png'))
-
+                if idx[0] == 97:
+                    breakpoint()
 
             # back_mv = sample['mv'].clone()
             # back_mv[:,2,2] = -1 * back_mv[:,2,2]

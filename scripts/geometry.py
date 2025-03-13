@@ -90,9 +90,9 @@ def geometry_training_loop(cfg,device):
     save_mesh_dir_fr = os.path.join(output_path,'mesh_epochs')
     os.makedirs(save_mesh_dir_fr, exist_ok=True)
     jacobian_dict = {}
-    if cfg.save_instance:
-        save_image_dir_fr = os.path.join(output_path,f'save_img_epoch_{cfg.save_index}')
-        os.makedirs(save_image_dir_fr, exist_ok=True)
+    # if cfg.save_instance:
+    save_image_dir_fr = os.path.join(output_path,f'save_img_epoch_{cfg.save_index}')
+    os.makedirs(save_image_dir_fr, exist_ok=True)
 
     for e in range(epochs) :
 
