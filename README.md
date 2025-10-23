@@ -6,6 +6,6 @@
 ---
 
 ## 🔓 Code Availability  
-Due to personal reasons, I’m currently unable to fully open-source the code. I plan to release the complete and polished version after **CVPR**.  
+Due to personal reasons, I’m currently unable to fully open-source the code. I plan to release the complete and polished version after CVPR deadline.  
 For now, you can access an **unpolished version** of the code here:  
 👉 [https://github.com/astonishingwolf/NeuralGarmentRecon](https://github.com/astonishingwolf/NeuralGarmentRecon)
