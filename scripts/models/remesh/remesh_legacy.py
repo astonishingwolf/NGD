@@ -6,43 +6,6 @@ import igl
 import scipy as sp
 import numpy as np
 from scripts.models.remesh.remesh_utils_legacy import *
-def adaptive_remesh_botsch(verts: torch.Tensor, faces: torch.Tensor, epsilon: float = 0.01, 
-                          iters: int = 3, project: bool = False, adaptive: bool = True):
-    """
-    Perform adaptive remeshing using Botsch's algorithm.
-    
-    Args:
-        verts: Vertex positions (N x 3)
-        faces: Face indices (M x 3)
-        epsilon: Target edge length
-        iters: Number of remeshing iterations
-        project: Whether to project vertices back onto the original surface
-        adaptive: Whether to use adaptive sizing field based on curvature
-    
-    Returns:
-        Tuple of (new_vertices, new_faces)
-    """
-    V = verts.clone()
-    F = faces.clone()
-    V0, F0 = V.clone(), F.clone()
-    
-    for i in range(iters):
-        print(f"Iteration {i+1}/{iters}")
-        
-        # Calculate sizing field
-        sizing_field = calc_sizing_field(V, F, epsilon, adaptive)
-        high = 1.6 * sizing_field
-        low = 0.5 * sizing_field
-        # breakpoint()
-        # Split long edges
-        # print("Splitting edges...")
-        V, F = remesh(V, F, high, low, flip = False)
-    
-    # breakpoint()    
-    return V, F
-
-
-
 def calc_sizing_field(verts: torch.Tensor, faces: torch.Tensor, epsilon: float = 0.001, \
                           iters: int = 3, project: bool = False, adaptive: bool = True):
 
@@ -181,23 +144,3 @@ def adaptive_remesh(vertices, faces, vertices_orig = None, faces_orig = None, ep
 
 
 
-def non_adaptive_remesh(self, flip:bool=True)->tuple[torch.Tensor,torch.Tensor]:
-
-    """
-    Non-adaptive remeshing of the mesh. This is a wrapper of the remesh() function.
-
-    Args:
-        flip (bool, optional): Whether to flip the mesh or not. Defaults to True.
-
-    Returns:
-        tuple[torch.Tensor,torch.Tensor]: tuple of (new_vertices, new_faces)
-    """
-    min_edge_len = self._ref_len * (1 - self._edge_len_tol)
-    max_edge_len = self._ref_len * (1 + self._edge_len_tol)
-    # breakpoint()
-    self._vertices_etc,self._faces = remesh(self._vertices_etc,self._faces,min_edge_len,max_edge_len,flip)
-    # breakpoint()
-    self._split_vertices_etc()
-    self._vertices.requires_grad_()
-
-    return self._vertices, self._faces

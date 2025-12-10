@@ -179,34 +179,3 @@ def load_camera_and_smpl_dress4d(cfg,smpl_pkl,start_end, DEVICE='cuda'):
     translation_cat = torch.stack(translation_cat)
 
     return mv_cat, proj_cat, pose_cat, betas_cat, translation_cat
-
-# get_targets_diffuse_erosion
-def get_targets_diffuse_erosion(normal_dir, image_size, start_end, skip, DEVICE='cuda'):
-    normal_files = natsorted(glob.glob(os.path.join(normal_dir, '*.png')))
-    diffuse_imgs = []
-
-    start, end = start_end
-    normal_files = normal_files[start:end:skip]
-
-    trans = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Resize((image_size, image_size))
-    ])
-
-    # Define erosion kernel
-    kernel_size = 3  # Adjust this as needed
-    kernel = np.ones((kernel_size, kernel_size), np.uint8)
-
-    for nor_file in normal_files:
-        normal_img = cv2.imread(nor_file, cv2.IMREAD_GRAYSCALE)
-
-        eroded_img = cv2.erode(normal_img, kernel, iterations=2)
-
-        eroded_pil = Image.fromarray(eroded_img)
-
-        normal_tensor = trans(eroded_pil).to(DEVICE)
-        diffuse_imgs.append(normal_tensor)
-
-    # Stack all tensors
-    diffuse_img_stacked = torch.stack(diffuse_imgs)
-    return diffuse_img_stacked

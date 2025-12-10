@@ -1,0 +1,9 @@
+[submodule "packages/nvdiffrast"]
+	path = packages/nvdiffrast
+	url = https://github.com/NVlabs/nvdiffrast.git
+[submodule "packages/nvdiffrec"]
+	path = packages/nvdiffrec
+	url = https://github.com/NVlabs/nvdiffrec.git
+[submodule "packages/fashion-clip"]
+	path = packages/fashion-clip
+	url = https://github.com/patrickjohncyh/fashion-clip.git

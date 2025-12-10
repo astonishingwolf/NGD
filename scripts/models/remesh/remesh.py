@@ -92,58 +92,6 @@ def triangle_subdivision(vertices_orig, faces_orig, face_mask_orig, edge_length_
 
     return vertices_final, faces_final, face_mask
 
-def loop_subdivision_wo_tverts(vertices_orig, faces_orig, face_mask_orig, edge_length_threshold=0.01, device='cuda'):
-    face_mask = face_mask_orig.to(torch.bool)
-    triangles_to_subdivide = faces_orig[face_mask.squeeze(-1)]
-    triangle_indices = torch.where(face_mask.squeeze(-1))[0]
-    new_triangles = []
-    new_vertices = vertices_orig.tolist()
-    midpoint_cache = {}
-
-    def get_edge_length(v1_idx, v2_idx):
-        return torch.norm(vertices_orig[v1_idx] - vertices_orig[v2_idx])
-
-    def get_midpoint(v1_idx, v2_idx):
-        edge_key = tuple(sorted([v1_idx, v2_idx]))
-        
-        if edge_key in midpoint_cache:
-            return midpoint_cache[edge_key]
-        else:
-            midpoint = (vertices_orig[v1_idx] + vertices_orig[v2_idx]) / 2.0
-            new_vertices.append(midpoint)
-            new_idx = len(new_vertices) - 1
-            midpoint_cache[edge_key] = new_idx
-
-            return new_idx
-
-    for triangle, tri_index in zip(triangles_to_subdivide,triangle_indices):
-        v1, v2, v3 = triangle[0].item(), triangle[1].item(), triangle[2].item()
-
-        if get_edge_length(v1, v2) < edge_length_threshold or get_edge_length(v2, v3) < edge_length_threshold \
-            or get_edge_length(v3, v1) < edge_length_threshold or triangle_too_short:
-            
-            face_mask[tri_index] = False
-            continue  
-
-        idx_m12 = get_midpoint(v1, v2)
-        idx_m23 = get_midpoint(v2, v3)
-        idx_m31 = get_midpoint(v3, v1)
-
-        if idx_m12 is None or idx_m23 is None or idx_m31 is None:
-            new_triangles.append([v1, v2, v3])
-        else:
-            new_triangles.append([v1, idx_m12, idx_m31])
-            new_triangles.append([idx_m12, v2, idx_m23])
-            new_triangles.append([idx_m31, idx_m23, v3])
-            new_triangles.append([idx_m12, idx_m23, idx_m31])
-
-    new_triangles = torch.tensor(new_triangles, dtype=torch.long).to(device)
-    new_vertices = torch.tensor(new_vertices).to(device)
-    vertices_final = new_vertices
-    faces_final = torch.cat([faces_orig[~face_mask.squeeze(-1)], new_triangles], dim=0)
-
-    return vertices_final, faces_final, face_mask
-
 @torch.no_grad()
 def remesh(
         vertices_etc:torch.Tensor, #V,D

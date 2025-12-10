@@ -1,192 +1,144 @@
+"""
+Monocular dataset for Dress4D dataset.
+"""
 import torch
-from torch.utils.data import Dataset, DataLoader
-import numpy as np
-import os
+from torch.utils.data import Dataset
 from easydict import EasyDict
-import pyrender
-import pickle
-import glob
-from scripts.dataloader.utils import *
+from scripts.dataloader.utils import (
+    load_camera_and_smpl_dress4d, get_targets_diffuse, get_targets_npy, get_targets_normal, get_target_imgs
+)
+
 DEVICE = 'cuda'
 
-def calculate_pca(pose_data, dim=4):
 
+def calculate_pca(pose_data: torch.Tensor, dim: int = 4) -> torch.Tensor:
+    """Calculate PCA reduction of pose data.
+    
+    Args:
+        pose_data: Pose data [N, D]
+        dim: Target dimensionality
+        
+    Returns:
+        Reduced pose data [N, dim]
+    """
     if dim > pose_data.shape[1]:
         raise ValueError(f"Reduction dimension ({dim}) cannot be larger than input dimension ({pose_data.shape[1]})")
     
-    # pose_data[:,:3] = pose_data[:,:3] * 0.0
     mean_pose = torch.mean(pose_data, dim=0)
     centered_data = pose_data - mean_pose
     cov_matrix = torch.mm(centered_data.T, centered_data) / (pose_data.shape[0] - 1)
     eigenvalues, eigenvectors = torch.linalg.eigh(cov_matrix)
     sorted_indices = torch.argsort(eigenvalues, descending=True)
-    eigenvalues = eigenvalues[sorted_indices]
-    eigenvectors = eigenvectors[:, sorted_indices]
-    
-    top_eigenvectors = eigenvectors[:, :dim]
-    reduced_pose = torch.mm(centered_data, top_eigenvectors)
-    
-    return reduced_pose
+    top_eigenvectors = eigenvectors[:, sorted_indices[:dim]]
+    return torch.mm(centered_data, top_eigenvectors)
+
 
 class MonocularDataset4DDress(Dataset):
-    def __init__(self, cfg):
-
-        """
-        Parameters:
-        ----------
-        cfg : 
-            Configuration object.
+    """Dataset for monocular reconstruction from Dress4D dataset."""
+    
+    def __init__(self, cfg: EasyDict):
+        """Initialize dataset.
+        
+        Args:
+            cfg: Configuration object with data paths and parameters
         """
         start_end = [cfg.start_frame, cfg.end_frame]
-        self.mv, self.proj, self.pose, self.betas, self.translation = load_camera_and_smpl_dress4d(cfg,cfg.smpl_pkl,start_end)
+        self.mv, self.proj, self.pose, self.betas, self.translation = load_camera_and_smpl_dress4d(
+            cfg, cfg.smpl_pkl, start_end
+        )
         self.reduced_pose = calculate_pca(self.pose)
         self.reduced_pose_eight = calculate_pca(self.pose, dim=2)
+        
+        # Generate side views using circular shifts
         shift = 1
-        self.mv_left = torch.cat([self.mv[shift:], self.mv[:shift]])  
-        self.mv_right = torch.cat([self.mv[-shift:], self.mv[:-shift]]) 
+        self.mv_left = torch.cat([self.mv[shift:], self.mv[:shift]])
+        self.mv_right = torch.cat([self.mv[-shift:], self.mv[:-shift]])
         shift = 10
         self.mv_back = torch.cat([self.mv[shift:], self.mv[:shift]])
-        self.time_iterators = torch.linspace(0, 1, len(self.mv)).to(DEVICE)
-        self.orig_image = get_targets_diffuse(cfg.target_images, cfg.image_size, start_end, cfg.skip_frames)
-        self.target_diffuse = get_targets_diffuse(cfg.target_diffuse_maps, cfg.image_size, start_end,cfg.skip_frames)
-        self.target_shil = get_targets_diffuse(cfg.target_shil_maps, cfg.image_size,start_end,cfg.skip_frames)
-        self.target_complete_shil = get_targets_diffuse(cfg.target_complete_shil_maps, cfg.image_size,start_end,cfg.skip_frames)
-        self.target_shil_seg = get_targets_diffuse(cfg.target_shil_seg_maps, cfg.image_size,start_end,cfg.skip_frames)
-        self.target_hands_shil = get_targets_diffuse(cfg.target_hand_mask, cfg.image_size,start_end,cfg.skip_frames)
-        self.target_depth = get_targets_npy(cfg.target_depth, cfg.image_size,start_end,cfg.skip_frames)
-        self.target_norm_map = get_targets_normal(cfg.target_normal, cfg.image_size,start_end,cfg.skip_frames)
-        self.iterator_helper = torch.arange(start_end[0],start_end[1],cfg.skip_frames)
-        # self.target_depth = torch.mul(self.target_depth, self.target_complete_shil.squeeze(1))
-        # min_vals =  self.target_depth.amin(dim=(1, 2), keepdim=True) 
-        # max_vals =  self.target_depth.amax(dim=(1, 2), keepdim=True) 
-        # self.target_depth_norm = ( self.target_depth - min_vals) / (max_vals - min_vals + 1e-8)  
-        # breakpoint()
         
-        # self.target_depth_norm = 1 - self.target_depth_norm
-        # self.target_depth_norm = self.target_depth
+        self.time_iterators = torch.linspace(0, 1, len(self.mv)).to(DEVICE)
+        self.iterator_helper = torch.arange(start_end[0], start_end[1], cfg.skip_frames)
+        
+        # Load target images
+        self.orig_image = get_targets_diffuse(cfg.target_images, cfg.image_size, start_end, cfg.skip_frames)
+        self.target_diffuse = get_targets_diffuse(cfg.target_diffuse_maps, cfg.image_size, start_end, cfg.skip_frames)
+        self.target_shil = get_targets_diffuse(cfg.target_shil_maps, cfg.image_size, start_end, cfg.skip_frames)
+        self.target_complete_shil = get_targets_diffuse(
+            cfg.target_complete_shil_maps, cfg.image_size, start_end, cfg.skip_frames
+        )
+        self.target_shil_seg = get_targets_diffuse(cfg.target_shil_seg_maps, cfg.image_size, start_end, cfg.skip_frames)
+        self.target_hands_shil = get_targets_diffuse(cfg.target_hand_mask, cfg.image_size, start_end, cfg.skip_frames)
+        self.target_depth = get_targets_npy(cfg.target_depth, cfg.image_size, start_end, cfg.skip_frames)
+        self.target_norm_map = get_targets_normal(cfg.target_normal, cfg.image_size, start_end, cfg.skip_frames)
+
     def __len__(self) -> int:
+        """Return dataset size."""
         return len(self.target_diffuse)
 
-    def __getitem__(self, idx: int):
-        
-        sample = {}
-        sample['mv'] = self.mv[idx]
-        sample['mv_left'] = self.mv_left[idx]
-        sample['mv_right'] = self.mv_right[idx]
-        sample['mv_back'] = self.mv_back[idx]
-        sample['proj'] = self.proj[idx]
-        sample['time'] = self.time_iterators[idx]
-        sample['target_diffuse'] = self.target_diffuse[idx]
-        sample['target_shil'] = self.target_shil[idx]
-        sample['target_shil_seg'] = self.target_shil_seg[idx]
-        sample['target_complete_shil'] = self.target_complete_shil[idx]
-        sample['hands_shil'] = self.target_hands_shil[idx]
-        # self.target_depth
-        sample['target_depth'] = self.target_depth[idx]
-        sample['target_norm_map'] = self.target_norm_map[idx]
-        sample['tex_image'] = self.orig_image[idx]
-        sample['reduced_pose'] = self.reduced_pose[idx]
-        sample['reduced_pose_eight'] =  self.reduced_pose_eight[idx]
-        sample['pose'] = self.pose[idx]
-        sample['betas'] = self.betas[idx]
-        sample['translation'] = self.translation[idx]
-        sample['idx'] = self.iterator_helper[idx]
-        
-        return sample
+    def __getitem__(self, idx: int) -> dict:
+        """Get sample at index."""
+        return {
+            'mv': self.mv[idx],
+            'mv_left': self.mv_left[idx],
+            'mv_right': self.mv_right[idx],
+            'mv_back': self.mv_back[idx],
+            'proj': self.proj[idx],
+            'time': self.time_iterators[idx],
+            'target_diffuse': self.target_diffuse[idx],
+            'target_shil': self.target_shil[idx],
+            'target_shil_seg': self.target_shil_seg[idx],
+            'target_complete_shil': self.target_complete_shil[idx],
+            'hands_shil': self.target_hands_shil[idx],
+            'target_depth': self.target_depth[idx],
+            'target_norm_map': self.target_norm_map[idx],
+            'tex_image': self.orig_image[idx],
+            'reduced_pose': self.reduced_pose[idx],
+            'reduced_pose_eight': self.reduced_pose_eight[idx],
+            'pose': self.pose[idx],
+            'betas': self.betas[idx],
+            'translation': self.translation[idx],
+            'idx': self.iterator_helper[idx]
+        }
 
 
 class MonocularTextureDataset4DDress(Dataset):
-    def __init__(self, cfg):
-
-        """
-        Parameters:
-        ----------
-        cfg : 
-            Configuration object.
-        """
+    """Dataset for texture training from Dress4D dataset."""
+    
+    def __init__(self, cfg: EasyDict):
+        """Initialize texture dataset."""
         start_end = [cfg.start_frame, cfg.end_frame]
-        self.mv, self.proj, self.pose, self.betas, self.translation = load_camera_and_smpl_dress4d(cfg,cfg.smpl_pkl,start_end)
-        self.reduced_pose = calculate_pca(self.pose)
-        self.reduced_pose_eight = calculate_pca(self.pose, dim=2)
-        shift = 1
-        self.mv_left = torch.cat([self.mv[shift:], self.mv[:shift]])  
-        self.mv_right = torch.cat([self.mv[-shift:], self.mv[:-shift]]) 
-        shift = 10
-        self.mv_back = torch.cat([self.mv[shift:], self.mv[:shift]])
+        self.mv, self.proj, self.pose, self.betas, self.translation = load_camera_and_smpl_dress4d(
+            cfg, cfg.smpl_pkl, start_end
+        )
         self.time_iterators = torch.linspace(0, 1, len(self.mv)).to(DEVICE)
-        self.orig_image = get_targets_diffuse(cfg.target_images, cfg.image_size, start_end, cfg.skip_frames)
-        self.target_diffuse = get_targets_diffuse(cfg.target_diffuse_maps, cfg.image_size, start_end,cfg.skip_frames)
-        # self.target_shil = get_targets_diffuse(cfg.target_shil_maps, cfg.image_size,start_end,cfg.skip_frames)
-        self.target_shil = get_targets_diffuse_erosion(cfg.target_shil_maps, cfg.image_size,start_end,cfg.skip_frames)
-        self.target_complete_shil = get_targets_diffuse(cfg.target_complete_shil_maps, cfg.image_size,start_end,cfg.skip_frames)
-        self.target_shil_seg = get_targets_diffuse(cfg.target_shil_seg_maps, cfg.image_size,start_end,cfg.skip_frames)
-        self.target_hands_shil = get_targets_diffuse(cfg.target_hand_mask, cfg.image_size,start_end,cfg.skip_frames)
-        self.target_depth = get_targets_npy(cfg.target_depth, cfg.image_size,start_end,cfg.skip_frames)
-        self.target_norm_map = get_targets_normal(cfg.target_normal, cfg.image_size,start_end,cfg.skip_frames)
-        self.iterator_helper = torch.arange(start_end[0],start_end[1],cfg.skip_frames)
-        # self.target_depth = torch.mul(self.target_depth, self.target_complete_shil.squeeze(1))
-        # min_vals =  self.target_depth.amin(dim=(1, 2), keepdim=True) 
-        # max_vals =  self.target_depth.amax(dim=(1, 2), keepdim=True) 
-        # self.target_depth_norm = ( self.target_depth - min_vals) / (max_vals - min_vals + 1e-8)          
-        # self.target_depth_norm = 1 - self.target_depth_norm
-        # self.target_depth_norm = self.target_depth
+        self.iterator_helper = torch.arange(start_end[0], start_end[1], cfg.skip_frames)
+        
+        # Load images
+        self.target_image, self.background = get_target_imgs(
+            cfg.target_images, cfg.image_size, start_end, cfg.skip_frames
+        )
+        self.target_diffuse = get_targets_diffuse(cfg.target_diffuse_maps, cfg.image_size, start_end, cfg.skip_frames)
+        self.target_shil = get_targets_diffuse(cfg.target_shil_maps, cfg.image_size, start_end, cfg.skip_frames)
+        self.target_complete_shil = get_targets_diffuse(
+            cfg.target_complete_shil_maps, cfg.image_size, start_end, cfg.skip_frames
+        )
+
     def __len__(self) -> int:
+        """Return dataset size."""
         return len(self.target_diffuse)
 
-    def __getitem__(self, idx: int):
-        
-        sample = {}
-        sample['mv'] = self.mv[idx]
-        sample['mv_left'] = self.mv_left[idx]
-        sample['mv_right'] = self.mv_right[idx]
-        sample['mv_back'] = self.mv_back[idx]
-        sample['proj'] = self.proj[idx]
-        sample['time'] = self.time_iterators[idx]
-        sample['target_diffuse'] = self.target_diffuse[idx]
-        sample['target_shil'] = self.target_shil[idx]
-        sample['target_shil_seg'] = self.target_shil_seg[idx]
-        sample['target_complete_shil'] = self.target_complete_shil[idx]
-        sample['hands_shil'] = self.target_hands_shil[idx]
-        # self.target_depth
-        sample['target_depth'] = self.target_depth[idx]
-        sample['target_norm_map'] = self.target_norm_map[idx]
-        sample['tex_image'] = self.orig_image[idx]
-        sample['reduced_pose'] = self.reduced_pose[idx]
-        sample['reduced_pose_eight'] =  self.reduced_pose_eight[idx]
-        sample['pose'] = self.pose[idx]
-        sample['betas'] = self.betas[idx]
-        sample['translation'] = self.translation[idx]
-        sample['idx'] = self.iterator_helper[idx]
-        
-        return sample
-def main():
-    
-    cfg = {
-        'ROOT': {
-            'smpl_pkl': '/hdd_data/nakul/soham/people_snapshot/people_snapshot_public/male-1-sport/smpl_fitting/sample_video/vibe_output.pkl',
-            'target_diffuse_maps' : '/hdd_data/nakul/soham/people_snapshot/people_snapshot_public/male-1-sport/images_diffuse',
-            'image_size' : 1080,
-            'num_views': 64,
-            'device': 'cuda:0',
-            'resolution': (1080, 1080),
-            'num_chunks': 16,
-            'start_frame' : 0,
-            'end_frame' : 64,
-        },
-        'DEVICE' : 'cuda'
-    }
-    
-    dataset = MonocularDataset(EasyDict(cfg['ROOT']))
-    dataLoader = DataLoader(dataset, batch_size=2, shuffle=True)
-    
-    for batch in dataLoader:
-        print(f"Model View shape: {batch['mv'].shape}")
-        print(f"Proj shape: {batch['proj'].shape}")
-        print(f"Diffuse shape: {batch['target_diffuse'].shape}")
-        print(f"Pose Shape : {batch['pose'].shape}")
-        print(f"Betas Shape : {batch['betas'].shape}")
-        print(f"Time shape: {batch['time'].shape}")
-        
-
-if __name__=='__main__':
-    main()
+    def __getitem__(self, idx: int) -> dict:
+        """Get texture sample at index."""
+        return {
+            'mv': self.mv[idx],
+            'proj': self.proj[idx],
+            'time': self.time_iterators[idx],
+            'target_diffuse': self.target_diffuse[idx],
+            'target_shil': self.target_shil[idx],
+            'target_complete_shil': self.target_complete_shil[idx],
+            'tex_image': self.target_image[idx],
+            'pose': self.pose[idx],
+            'betas': self.betas[idx],
+            'translation': self.translation[idx],
+            'idx': self.iterator_helper[idx]
+        }

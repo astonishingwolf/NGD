@@ -1,18 +1,12 @@
 import torch
 import torch.nn as nn
 import os
-import json
 import tinycudann as tcnn
-import commentjson as json
 
-from scripts.models.core import diffusionnet as diffusion_net
-from scripts.models.core.diffusionnet.geometry import get_operators
-# from scripts.models.core.NeuralJacobianFields.MeshProcessor import WaveKernelSignature
-from scripts.models.core.siren.mlp import Siren
 from scripts.models.model_utils import get_embedder
+from scripts.utils.config_utils import load_texture_config
 
-with open("scripts/models/config/config_tex.json") as f:
-	hash_cfg = json.load(f)
+hash_cfg = load_texture_config()
 
 class HashGrid_w_pose(nn.Module):
     def __init__(self, config, multires=10, device = 'cuda'):  

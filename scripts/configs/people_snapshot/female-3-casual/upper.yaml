@@ -1,86 +1,107 @@
+# ============================================================================
+# MonoClothRecon Configuration File
+# Dataset: PeopleSnapshot - Upper Garment
+# ============================================================================
+
+# Global Settings
 gpu: 0
 seed: 99
 
 timeloop:
-  model_type : PeopleSnapshot
-  num_epochs : 1200
-  device : cuda:0
-  start_frame : 1
-  end_frame : 400
-  skip_frames : 4
-  warm_ups : 100
-  warm_ups_remesh : 400
-  remesh_freq : 200
-  batch_size : 1
-  model : hashgrid_vd
-  hidden_layers : 3
-  pose_noise : False
-  noise_level : 0.002
-  vertex_noise : True
-  skinning_func : rbf  
-  stop_train_after_warmup : True
-  use_grad_clipping : False
-  retriangulate: 0
-  remeshing : True
-  create_new_optimizer : False
-  gradient_clipping : True
-  interpolate_new_optimizer : True
-  custom_template : False
-
-  #Remeshing
-  remesh_percentile : 0.9
-  max_verts : 15_000
-  start_edge_len : 0.01
-  end_edge_len : 0.007
-  start_percentile : 0.85
-  end_percentile : 0.95
-  remesh_stop : 750
-
-
-  # Save Paths
-  output_path: /hdd_data/nakul/soham/Results/PeopleSnapshot/female-3-casual/Remeshed/upper
-  Exp_name : Final_trial3
-
-
-  save_instance : True
-  save_index : 21
-
-  remesh_percentile : 0.8
-
+  # ========================================================================
+  # Model Configuration
+  # ========================================================================
+  model_type: PeopleSnapshot  # Options: Dress4D, PeopleSnapshot
+  model: hashgrid_vd  # Options: hashgrid, hashgrid_vd, general, diffusion
+  hidden_layers: 3
+  batch_size: 1
+  device: cuda:0
   
+  # ========================================================================
+  # Dataset Configuration
+  # ========================================================================
+  start_frame: 1
+  end_frame: 400
+  skip_frames: 4
+  image_size: 1080
+  
+  # ========================================================================
   # Input Paths
-  smpl_path : /home/nakul/soham/3d/fixnormalndepth/SMPL_NEUTRAL.pkl
-  smpl_pkl : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/4dhumans/output_data.pkl
+  # ========================================================================
+  # SMPL Model and Fittings
+  smpl_path: /home/nakul/soham/3d/fixnormalndepth/SMPL_NEUTRAL.pkl
+  smpl_pkl: /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/4dhumans/output_data.pkl
+  template_smpl_pkl: null  # Set to null if not using custom template
+  custom_template: false
+  
+  # Mesh Template
   mesh: /hdd_data/nakul/soham/Template_dir/General/Tshirt/tshirt.obj
-  target_diffuse_maps : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/diffuse_upper
-  target_shil_maps : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/shils_upper
-  target_shil_seg_maps : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/shils_upper
-  target_complete_shil_maps : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/seg_human_mask
-  target_hand_mask : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/hands_mask
-  target_depth : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/sapien_depth
-  target_normal : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/sapien_norm
-  target_images : /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/raw_img
-  image_size : 1080   
-
-  # Training Parameters
-  position_lr_init : 0.0003 
-  position_lr_final : 0.00000016
-  position_lr_delay_mult : 0.01
-  position_lr_max_steps : 100_000
-  deform_lr_max_steps : 140_000
-  custom_training_cannonical : True
-
-  # Losses
+  
+  # Target Images and Masks
+  target_images: /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/raw_img
+  target_diffuse_maps: /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/diffuse_upper
+  target_shil_maps: /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/shils_upper
+  target_shil_seg_maps: /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/shils_upper
+  target_complete_shil_maps: /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/seg_human_mask
+  target_hand_mask: /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/hands_mask
+  target_depth: /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/sapien_depth
+  target_normal: /hdd_data/nakul/soham/Dataset/people_snapshot_public_proprecess/female-3-casual/sapien_norm
+  
+  # ========================================================================
+  # Training Configuration
+  # ========================================================================
+  num_epochs: 1200
+  warm_ups: 100
+  warm_ups_remesh: 400
+  remesh_freq: 200
+  
+  # Learning Rate Schedules
+  position_lr_init: 0.0003
+  position_lr_final: 0.00000016
+  position_lr_delay_mult: 0.01
+  position_lr_max_steps: 100000
+  deform_lr_max_steps: 140000
+  custom_training_cannonical: true
+  
+  # Data Augmentation
+  pose_noise: false
+  noise_level: 0.002
+  vertex_noise: true
+  
+  # Optimization
+  skinning_func: rbf  # Options: rbf, k-near
+  gradient_clipping: true
+  stop_train_after_warmup: true
+  
+  # ========================================================================
+  # Remeshing Configuration
+  # ========================================================================
+  remeshing: true
+  remesh_stop: 750
+  remesh_percentile: 0.8
+  max_verts: 15000
+  start_edge_len: 0.01
+  end_edge_len: 0.007
+  start_percentile: 0.85
+  end_percentile: 0.95
+  retriangulate: 0
+  create_new_optimizer: false
+  interpolate_new_optimizer: true
+  
+  # ========================================================================
+  # Loss Configuration
+  # ========================================================================
   losses:
     RenderingLoss: 5.0
     Regularization: 0.0
     StVKLoss: 1.0
-    BendingLoss: 1.0 
-    DepthDistillation : 1.0
+    BendingLoss: 1.0
+    DepthDistillation: 1.0
   
-
-  #Logging
-  logging : False
+  # ========================================================================
+  # Logging Configuration
+  # ========================================================================
+  logging: false
   log_interval: 5
   log_interval_im: 150
   log_elev: 0
@@ -88,20 +109,31 @@ timeloop:
   log_dist: 3.0
   log_res: 512
   log_light_power: 3.0
-
-  ## Texture
-  texture_recon : False
-  texture_lr_base : 1e-4
-  texture_lr_base_dyn : 1e-4
-  texture_map : [1024,1024]
-  max_mip_level : 3
-  tex_epochs : 1000
-  texture_warm_ups : 100
-  use_dynamic_texture : True
-  texture_lr_init : 0.002
-  texture_lr_final : 0.000016
-  texture_lr_delay_mult : 0.01
-  texture_lr_max_steps : 100000
-  spatial_lr_scale : 5
-  ssim_coeff : 0.001
- 
+  
+  # ========================================================================
+  # Output Configuration
+  # ========================================================================
+  output_path: /hdd_data/nakul/soham/Results/PeopleSnapshot/female-3-casual/Remeshed/upper
+  Exp_name: Final_trial3
+  save_instance: true
+  save_index: 21
+  save_freq: 100
+  
+  # ========================================================================
+  # Texture Configuration
+  # ========================================================================
+  texture_recon: false
+  texture_model: hashgrid_base  # Options: hashgrid_base, hashgrid_reg
+  texture_map: [1024, 1024]
+  max_mip_level: 3
+  tex_epochs: 1000
+  texture_warm_ups: 100
+  use_dynamic_texture: true
+  texture_lr_init: 0.002
+  texture_lr_final: 0.000016
+  texture_lr_delay_mult: 0.01
+  texture_lr_max_steps: 100000
+  spatial_lr_scale: 5
+  ssim_coeff: 0.001
+  texture_lr_base: 1e-4
+  texture_lr_base_dyn: 1e-4

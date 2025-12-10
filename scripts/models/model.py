@@ -1,18 +1,15 @@
 import torch
 import torch.nn as nn
 import os
-import json
 import tinycudann as tcnn
-import commentjson as json
 
 from scripts.models.core import diffusionnet as diffusion_net
 from scripts.models.core.diffusionnet.geometry import get_operators
-# from scripts.models.core.NeuralJacobianFields.MeshProcessor import WaveKernelSignature
 from scripts.models.core.siren.mlp import Siren
 from scripts.models.model_utils import get_embedder
+from scripts.utils.config_utils import load_hash_config
 
-with open("scripts/models/config/config_hash.json") as f:
-	hash_cfg = json.load(f)
+hash_cfg = load_hash_config()
 
 class HashGrid_w_pose(nn.Module):
     def __init__(self, config, template, multires=10, device = 'cuda'):  
@@ -94,26 +91,6 @@ class DiffusionModel(nn.Module):
         return residual_jacobians
 
 
-class SirenWKS(nn.Module):
-    def __init__(self, config, template):
-        super(SirenWKS, self).__init__()
-
-        self.template = template
-        self.config = config
-        self.wave_function = WaveKernelSignature(template.sources_vertices.cpu().numpy(), template.source_faces.cpu().numpy())
-        self.verts_wks = wave_function.compute()
-        self.face_wks = wave_function.compute_on_triangles()
-        self.face_wks_tensor = torch.from_numpy(face_wks).to(DEVICE).to(torch.float32)
-        self.mlp = Siren(in_features = 32, out_features = 9, hidden_features = 256, 
-                hidden_layers = 3, outermost_linear=True).to(DEVICE)
-
-    def forward(self, inputs) -> torch.Tensor:
-        
-        residual_jacobians,_ = self.mlp(torch.cat((inputs.face_centers, inputs.face_normals,\
-            self.face_wks_tensor, inputs.time_extended), dim=1))
-        
-        return self.layers(x)
-
 
 class GeneralSiren(nn.Module):
     def __init__(self, config, template):
@@ -137,9 +114,7 @@ class Model(nn.Module):
 
         super(Model, self).__init__()
         self.config = config
-        if config.model == 'sirenWKS':
-            self.model = SirenWKS(config, template)
-        elif config.model == 'diffusion':
+        if config.model == 'diffusion':
             self.model = DiffusionModel(config, template)
         elif config.model == 'general':
             self.model = GeneralSiren(config, template)

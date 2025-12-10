@@ -1,4 +1,10 @@
-packages/
+# Ignore packages directory except submodules
+packages/*
+!packages/nvdiffrast
+!packages/nvdiffrec
+!packages/fashion-clip
+!packages/nvdiffmodeling
+!packages/fashion_clip
 scripts/configs
 assests/
 runs/
