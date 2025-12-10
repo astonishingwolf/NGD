@@ -1,6 +1,8 @@
-# MonoClothRecon
+# NGD: Neural Gradient Based Deformation for Monocular Garment Reconstruction
 
-Monocular 3D Cloth Reconstruction from Single-View Images
+[Project Page](https://astonishingwolf.github.io/pages/NGD/)
+[arxiv](https://arxiv.org/pdf/2508.17712)
+
 
 ## Installation
 
