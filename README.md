@@ -1,7 +1,8 @@
 # NGD: Neural Gradient Based Deformation for Monocular Garment Reconstruction
 
-[Project Page](https://astonishingwolf.github.io/pages/NGD/)
-[arxiv](https://arxiv.org/pdf/2508.17712)
+## [Project Page](https://astonishingwolf.github.io/pages/NGD/)
+
+## [Arxiv](https://arxiv.org/pdf/2508.17712)
 
 
 ## Installation
