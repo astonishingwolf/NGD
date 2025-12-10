@@ -20,11 +20,6 @@ This installation guide assumes you have Python 3.9+ and recommend using Anacond
 
 Clone the repository with submodules:
 
-```bash
-git clone --recurse-submodules https://github.com/your-username/MonoClothRecon.git
-cd MonoClothRecon
-```
-
 If you've already cloned the repository without submodules, initialize them:
 
 ```bash
@@ -198,28 +193,7 @@ MonoClothRecon/
 └── preprocessing/         # Data preprocessing scripts
 ```
 
-## Troubleshooting
 
-### CUDA Out of Memory
-
-- Reduce `batch_size` in config
-- Reduce `image_size`
-- Enable gradient checkpointing if available
-
-### Submodule Issues
-
-If submodules are not initialized:
-
-```bash
-git submodule update --init --recursive
-```
-
-### nvdiffrast Build Errors
-
-Ensure you have:
-- CUDA toolkit installed
-- Proper CUDA version matching PyTorch
-- GCC compiler with C++17 support
 
 ## Citation
 
@@ -240,11 +214,9 @@ Please check individual package licenses:
 - nvdiffrast: NVIDIA Source Code License
 - nvdiffrec: NVIDIA Source Code License
 - fashion-clip: Check original repository license
-- This codebase: [Your License]
 
 ## Acknowledgments
 
 - NVIDIA nvdiffrast and nvdiffrec for differentiable rendering
 - SMPL model from Max Planck Institute
-- Fashion-CLIP for fashion understanding
 
